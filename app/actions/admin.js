@@ -28,6 +28,8 @@ export async function deleteCategory(id) {
   return { success: true }
 }
 
+import { revalidatePath } from 'next/cache';
+
 // ── 아이템 ──────────────────────────────────────────────
 export async function addItem(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
@@ -38,6 +40,12 @@ export async function addItem(data) {
     .from('items')
     .insert({ name, category_id: category_id || null, emoji, description, craft_output: craft_output || null })
     .select().single()
+
+
+  // 💡 진짜 원인을 파악하기 위해 로그를 찍어봅시다!
+  console.log("DB 등록 결과 - 에러:", error); 
+  console.log("DB 등록 결과 - 데이터:", item);
+  
   if (error) return { error: error.message }
 
   if (craft_output && materials?.length) {
@@ -47,10 +55,14 @@ export async function addItem(data) {
     if (re) return { error: re.message }
   }
 
-  const { data: full } = await db
+  const { data: full, error: fetchError } = await db
     .from('items')
-    .select('*, item_categories(id, name), recipes(material_id, amount)')
+    .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
     .eq('id', item.id).single()
+
+  revalidatePath('/admin');
+
+  if (fetchError) return { error: fetchError.message }
   return { item: full }
 }
 
@@ -72,10 +84,11 @@ export async function updateItem(id, data) {
     )
   }
 
-  const { data: full } = await db
+  const { data: full, error: fetchError } = await db
     .from('items')
-    .select('*, item_categories(id, name), recipes(material_id, amount)')
+    .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
     .eq('id', id).single()
+  if (fetchError) return { error: fetchError.message }
   return { item: full }
 }
 
@@ -105,11 +118,11 @@ async function insertQuestRelations(db, questId, conditions, rewards) {
 }
 
 async function fetchFullQuest(db, id) {
-  const { data } = await db
+  const { data, error } = await db
     .from('quests')
     .select('*, quest_conditions(id, name, type, max_value, sort_order), quest_rewards(id, item_id, amount, items(name, emoji))')
     .eq('id', id).single()
-  return data
+  return { data, error }
 }
 
 export async function addQuest(data) {
@@ -124,7 +137,9 @@ export async function addQuest(data) {
   if (error) return { error: error.message }
 
   await insertQuestRelations(db, quest.id, conditions, rewards)
-  return { quest: await fetchFullQuest(db, quest.id) }
+  const { data: full, error: fetchError } = await fetchFullQuest(db, quest.id)
+  if (fetchError) return { error: fetchError.message }
+  return { quest: full }
 }
 
 export async function updateQuest(id, data) {
@@ -141,7 +156,9 @@ export async function updateQuest(id, data) {
   await db.from('quest_conditions').delete().eq('quest_id', id)
   await db.from('quest_rewards').delete().eq('quest_id', id)
   await insertQuestRelations(db, id, conditions, rewards)
-  return { quest: await fetchFullQuest(db, id) }
+  const { data: full, error: fetchError } = await fetchFullQuest(db, id)
+  if (fetchError) return { error: fetchError.message }
+  return { quest: full }
 }
 
 export async function deleteQuest(id) {

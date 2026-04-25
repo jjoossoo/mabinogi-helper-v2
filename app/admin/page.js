@@ -14,20 +14,21 @@ export default async function AdminPage() {
   const admin = createAdminClient()
 
   const [
-    { data: categories },
-    { data: items },
-    { data: quests },
-    { data: profiles },
+    { data: categories, error: catErr },
+    { data: items, error: itemsErr },
+    { data: quests, error: questsErr },
+    { data: profiles, error: profilesErr },
   ] = await Promise.all([
     admin.from('item_categories').select('*').order('name'),
     admin.from('items')
-      .select('*, item_categories(id, name), recipes(material_id, amount)')
+      .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
       .order('name'),
     admin.from('quests')
       .select('*, quest_conditions(id, name, type, max_value, sort_order), quest_rewards(id, item_id, amount, items(name, emoji))')
       .order('name'),
     admin.from('profiles').select('user_id, role, created_at'),
   ])
+  console.log('[admin] query errors:', { catErr, itemsErr, questsErr, profilesErr })
   const { data: { users } } = await admin.auth.admin.listUsers()
   const roleMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p]))
   const members = (users ?? []).map(u => ({
