@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthButton from "@/components/AuthButton";
@@ -26,9 +27,14 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col bg-slate-900">
         <header className="bg-slate-800 border-b border-amber-900/40 px-4 py-3">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <span className="text-amber-400 font-bold tracking-wider" style={{ fontFamily: 'serif' }}>
-              ⚔️ 마비노기 헬퍼
-            </span>
+            <Link
+              href="/"
+              className="text-amber-400 font-bold tracking-wider hover:opacity-80 transition-opacity"
+              style={{ fontFamily: 'serif' }}
+            >
+              ⚔️ 마비노기 숙제 도우미
+            </Link>
+
             <AuthButton />
           </div>
         </header>
