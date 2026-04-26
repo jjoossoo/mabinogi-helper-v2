@@ -43,8 +43,8 @@ export default function CharacterModal({ onSuccess, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="panel dots-bg w-full max-w-md rounded-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:px-4">
+      <div className="panel dots-bg w-full sm:max-w-md rounded-t-xl sm:rounded-xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* 모달 헤더 */}
         <div
           className="flex items-center justify-between px-6 py-4"
@@ -62,7 +62,7 @@ export default function CharacterModal({ onSuccess, onClose }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           {error && (
             <p className="text-sm rounded px-3 py-2" style={{
               background: 'rgba(139,32,32,0.1)',
@@ -168,18 +168,18 @@ export default function CharacterModal({ onSuccess, onClose }) {
             <span className="text-sm" style={{ color: 'var(--ink)' }}>대표 캐릭터로 설정</span>
           </label>
 
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-2 pb-1">
             <button
               type="button"
               onClick={onClose}
-              className="btn-danger flex-1 py-2.5 rounded text-sm"
+              className="btn-danger flex-1 py-3 rounded text-sm"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="btn-primary flex-1 py-2.5 rounded text-sm"
+              className="btn-primary flex-1 py-3 rounded text-sm"
             >
               {isPending ? '추가 중...' : '추가하기'}
             </button>

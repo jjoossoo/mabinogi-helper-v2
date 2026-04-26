@@ -44,16 +44,75 @@ export default function MainView({ initialCharacters }) {
 
   return (
     <>
+      {/* ── 모바일: 가로 스크롤 캐릭터 바 ── */}
+      <div
+        className="md:hidden flex-shrink-0 overflow-x-auto"
+        style={{
+          backgroundColor: '#110c04',
+          borderBottom: '1.5px solid rgba(201,168,76,0.35)',
+        }}
+      >
+        <div className="flex items-center gap-1.5 px-3 py-2 min-w-max">
+          {characters.length === 0 && (
+            <span className="text-xs px-2" style={{ color: 'var(--parchment)', opacity: 0.4 }}>
+              캐릭터를 추가하세요
+            </span>
+          )}
+          {characters.map(char => {
+            const cls = CLASS_MAP[char.class]
+            const isSelected = char.id === selectedId
+            return (
+              <div key={char.id} className="relative flex-shrink-0">
+                <button
+                  onClick={() => setSelectedId(char.id)}
+                  className="flex flex-col items-center px-3 py-2 rounded-lg transition-colors min-w-[60px]"
+                  style={{
+                    backgroundColor: isSelected ? 'rgba(201,168,76,0.15)' : 'transparent',
+                    border: `1.5px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
+                    minHeight: '56px',
+                  }}
+                >
+                  <span className="text-2xl leading-none">{cls?.emoji ?? '👤'}</span>
+                  <span
+                    className="text-xs mt-1 truncate max-w-[56px] font-medium"
+                    style={{ color: isSelected ? 'var(--gold-light)' : 'var(--parchment)', opacity: isSelected ? 1 : 0.7 }}
+                  >
+                    {char.name}
+                  </span>
+                </button>
+                {/* 모바일 삭제 버튼 */}
+                <button
+                  onClick={() => handleDelete(char)}
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full text-[9px] leading-none"
+                  style={{ backgroundColor: 'rgba(139,32,32,0.85)', color: 'var(--parchment)' }}
+                  title="삭제"
+                >
+                  ✕
+                </button>
+              </div>
+            )
+          })}
+          <button
+            onClick={() => setShowModal(true)}
+            className="btn-primary flex flex-col items-center justify-center rounded-lg flex-shrink-0 px-3 py-2 min-w-[60px]"
+            style={{ minHeight: '56px' }}
+          >
+            <span className="text-xl leading-none font-bold">+</span>
+            <span className="text-xs mt-1">추가</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 데스크탑+모바일 공통 레이아웃 ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* 좌측 사이드바 */}
+        {/* 데스크탑 좌측 사이드바 */}
         <aside
-          className="w-60 flex-shrink-0 flex flex-col overflow-y-auto"
+          className="hidden md:flex w-60 flex-shrink-0 flex-col overflow-y-auto"
           style={{
             backgroundColor: '#110c04',
             borderRight: '1.5px solid rgba(201,168,76,0.35)',
           }}
         >
-          {/* 사이드바 헤더 */}
           <div
             className="flex items-center justify-between px-4 py-3"
             style={{ borderBottom: '1px solid rgba(201,168,76,0.25)' }}
@@ -64,13 +123,12 @@ export default function MainView({ initialCharacters }) {
             <button
               onClick={() => setShowModal(true)}
               title="캐릭터 추가"
-              className="btn-primary w-6 h-6 flex items-center justify-center rounded text-lg leading-none"
+              className="btn-primary w-7 h-7 flex items-center justify-center rounded text-lg leading-none"
             >
               +
             </button>
           </div>
 
-          {/* 캐릭터 목록 */}
           <ul className="flex-1 py-1">
             {characters.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm" style={{ color: 'var(--parchment)', opacity: 0.3 }}>
@@ -89,6 +147,7 @@ export default function MainView({ initialCharacters }) {
                       style={{
                         borderLeft: `2px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
                         backgroundColor: isSelected ? 'rgba(201,168,76,0.12)' : 'transparent',
+                        minHeight: '52px',
                       }}
                     >
                       <span className="text-xl flex-shrink-0">{cls?.emoji ?? '👤'}</span>
@@ -110,7 +169,7 @@ export default function MainView({ initialCharacters }) {
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); handleDelete(char) }}
-                        className="opacity-0 group-hover:opacity-100 text-xs transition-all flex-shrink-0 p-1 hover:opacity-70"
+                        className="opacity-0 group-hover:opacity-100 text-xs transition-all flex-shrink-0 p-1"
                         style={{ color: 'var(--crimson-light)' }}
                         title="삭제"
                       >
@@ -126,26 +185,26 @@ export default function MainView({ initialCharacters }) {
 
         {/* 우측 메인 영역 */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* 선택된 캐릭터 정보 배너 */}
+          {/* 캐릭터 정보 배너 */}
           {selectedChar ? (
             <div
-              className="px-5 py-2.5 flex items-center gap-3 flex-shrink-0"
+              className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0"
               style={{
                 background: 'rgba(245,237,214,0.06)',
                 borderBottom: '1px solid rgba(201,168,76,0.25)',
               }}
             >
-              <span className="text-2xl">{CLASS_MAP[selectedChar.class]?.emoji ?? '👤'}</span>
-              <div>
+              <span className="text-xl flex-shrink-0">{CLASS_MAP[selectedChar.class]?.emoji ?? '👤'}</span>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm" style={{ color: 'var(--parchment)' }}>
                     {selectedChar.name}
                   </span>
                   {selectedChar.is_main && (
-                    <span className="text-xs font-medium" style={{ color: 'var(--gold)' }}>대표</span>
+                    <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--gold)' }}>대표</span>
                   )}
                 </div>
-                <div className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.45 }}>
+                <div className="text-xs truncate" style={{ color: 'var(--parchment)', opacity: 0.45 }}>
                   {CLASS_MAP[selectedChar.class]?.name} · Lv.{selectedChar.level} · {selectedChar.server}
                   {selectedChar.memo && ` · ${selectedChar.memo}`}
                 </div>
@@ -153,7 +212,7 @@ export default function MainView({ initialCharacters }) {
             </div>
           ) : (
             <div
-              className="px-5 py-3 text-sm flex-shrink-0"
+              className="px-4 py-3 text-sm flex-shrink-0"
               style={{
                 borderBottom: '1px solid rgba(201,168,76,0.2)',
                 color: 'var(--parchment)',
@@ -176,7 +235,8 @@ export default function MainView({ initialCharacters }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3 text-sm transition-colors ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'}`}
+                className={`flex-1 md:flex-none px-4 md:px-5 py-3.5 md:py-3 text-sm transition-colors ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'}`}
+                style={{ minHeight: '48px' }}
               >
                 {tab.label}
               </button>
@@ -184,11 +244,11 @@ export default function MainView({ initialCharacters }) {
           </div>
 
           {/* 탭 콘텐츠 */}
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-4 md:p-5">
             {!selectedChar ? (
               <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--parchment)', opacity: 0.25 }}>
                 <div className="text-5xl mb-3">⚔</div>
-                <p className="text-sm">좌측에서 캐릭터를 선택하거나 추가하세요</p>
+                <p className="text-sm text-center px-4">위에서 캐릭터를 선택하거나 추가하세요</p>
               </div>
             ) : activeTab === 'quests' ? (
               <QuestsPanel characterId={selectedChar.id} />

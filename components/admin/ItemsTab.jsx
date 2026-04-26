@@ -50,8 +50,8 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="panel dots-bg w-full max-w-lg rounded-xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:px-4">
+      <div className="panel dots-bg w-full sm:max-w-lg rounded-t-xl sm:rounded-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col">
         <div
           className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: '1px solid rgba(201,168,76,0.35)' }}
@@ -218,50 +218,53 @@ export default function ItemsTab({ categories, setCategories, items, setItems })
     : items
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col md:flex-row h-full overflow-hidden">
       {/* 카테고리 사이드바 */}
       <aside
-        className="w-52 flex-shrink-0 flex flex-col overflow-y-auto"
+        className="flex-shrink-0 md:w-52 md:flex-col md:overflow-y-auto"
         style={{
           backgroundColor: 'var(--parchment-dark)',
-          borderRight: '1px solid rgba(138,106,31,0.35)',
+          borderBottom: '1px solid rgba(138,106,31,0.25)',
         }}
       >
         <div className="p-3" style={{ borderBottom: '1px solid rgba(138,106,31,0.25)' }}>
-          <p className="font-serif font-semibold text-xs mb-2" style={{ color: 'var(--gold-dark)' }}>✦ 카테고리</p>
+          <p className="font-serif font-semibold text-xs mb-2 hidden md:block" style={{ color: 'var(--gold-dark)' }}>✦ 카테고리</p>
           <div className="flex gap-1">
             <input value={newCatName} onChange={e => setNewCatName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
               placeholder="새 카테고리"
-              className="input-field flex-1 rounded px-2 py-1 text-xs" />
+              className="input-field flex-1 rounded px-2 py-1.5 text-xs" />
             <button onClick={handleAddCategory}
-              className="btn-primary text-xs px-2 py-1 rounded font-bold">+</button>
+              className="btn-primary text-xs px-3 py-1.5 rounded font-bold">+</button>
           </div>
           {catError && <p className="text-xs mt-1" style={{ color: 'var(--crimson-light)' }}>{catError}</p>}
         </div>
-        <ul className="flex-1 py-1">
-          <li>
+        {/* 모바일: 가로 스크롤 / 데스크탑: 세로 목록 */}
+        <ul className="flex overflow-x-auto md:flex-col md:overflow-x-hidden md:overflow-y-auto py-1.5 md:py-1 px-1.5 md:px-0 gap-1 md:gap-0">
+          <li className="flex-shrink-0 md:flex-shrink">
             <button
               onClick={() => setFilterCategoryId(null)}
-              className="w-full text-left px-3 py-2 text-sm transition-colors"
+              className="whitespace-nowrap md:w-full text-left px-3 py-2 text-sm rounded md:rounded-none transition-colors"
               style={{
                 color: !filterCategoryId ? 'var(--gold-dark)' : 'var(--ink)',
                 backgroundColor: !filterCategoryId ? 'rgba(201,168,76,0.18)' : 'transparent',
                 fontWeight: !filterCategoryId ? 600 : 400,
+                minHeight: '36px',
               }}
             >
               전체 ({items.length})
             </button>
           </li>
           {categories.map(cat => (
-            <li key={cat.id} className="group flex items-center">
+            <li key={cat.id} className="group flex items-center flex-shrink-0 md:flex-shrink">
               <button
                 onClick={() => setFilterCategoryId(cat.id)}
-                className="flex-1 text-left px-3 py-2 text-sm transition-colors"
+                className="whitespace-nowrap md:flex-1 text-left px-3 py-2 text-sm rounded md:rounded-none transition-colors"
                 style={{
                   color: filterCategoryId === cat.id ? 'var(--gold-dark)' : 'var(--ink)',
                   backgroundColor: filterCategoryId === cat.id ? 'rgba(201,168,76,0.18)' : 'transparent',
                   fontWeight: filterCategoryId === cat.id ? 600 : 400,
+                  minHeight: '36px',
                 }}
               >
                 {cat.name} ({items.filter(i => i.category_id === cat.id).length})
@@ -277,19 +280,22 @@ export default function ItemsTab({ categories, setCategories, items, setItems })
       </aside>
 
       {/* 아이템 목록 */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--panel-bg)' }}>
+      <div
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ backgroundColor: 'var(--panel-bg)', borderLeft: '1px solid rgba(138,106,31,0.2)' }}
+      >
         <div
-          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+          className="flex items-center justify-between px-4 md:px-5 py-3 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(138,106,31,0.25)' }}
         >
           <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.55 }}>{filteredItems.length}개 아이템</span>
           <button onClick={() => setModal('add')}
-            className="btn-primary text-sm px-3 py-1.5 rounded">
+            className="btn-primary text-sm px-3 py-2 rounded" style={{ minHeight: '40px' }}>
             + 아이템 추가
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto dots-bg">
-          <table className="w-full text-sm">
+        <div className="flex-1 overflow-y-auto overflow-x-auto dots-bg">
+          <table className="w-full text-sm min-w-[480px]">
             <thead className="sticky top-0" style={{ backgroundColor: 'var(--parchment-dark)' }}>
               <tr>
                 <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>아이템</th>

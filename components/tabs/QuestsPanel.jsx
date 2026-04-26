@@ -269,8 +269,8 @@ function QuestPickerModal({ allQuests, selectedIds, onToggle, onClose }) {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="panel dots-bg w-full max-w-lg rounded-xl max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:px-4">
+      <div className="panel dots-bg w-full sm:max-w-lg rounded-t-xl sm:rounded-xl max-h-[88vh] sm:max-h-[80vh] flex flex-col">
         <div
           className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: '1px solid rgba(201,168,76,0.35)' }}
@@ -418,21 +418,24 @@ export default function QuestsPanel({ characterId }) {
   return (
     <div className="flex flex-col h-full">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <div className="flex gap-1 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 flex-shrink-0">
+        <div className="flex gap-1 flex-wrap flex-1">
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
-              className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-              style={effectiveCategory === cat
-                ? { backgroundColor: 'var(--parchment)', color: 'var(--ink)', fontWeight: 600, border: '1.5px solid var(--gold)' }
-                : { color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.5)', background: 'rgba(201,168,76,0.06)' }
-              }>
+              className="px-3 rounded text-xs font-medium transition-colors"
+              style={{
+                minHeight: '36px',
+                ...(effectiveCategory === cat
+                  ? { backgroundColor: 'var(--parchment)', color: 'var(--ink)', fontWeight: 600, border: '1.5px solid var(--gold)' }
+                  : { color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.5)', background: 'rgba(201,168,76,0.06)' })
+              }}>
               {cat} ({selectedQuests.filter(q => q.category === cat).length})
             </button>
           ))}
         </div>
         <button onClick={() => setShowPicker(true)}
-          className="btn-primary text-xs px-3 py-1.5 rounded flex-shrink-0 ml-2">
+          className="btn-primary text-sm sm:text-xs w-full sm:w-auto px-4 sm:px-3 rounded font-medium flex-shrink-0"
+          style={{ minHeight: '44px' }}>
           + 퀘스트 선택
         </button>
       </div>

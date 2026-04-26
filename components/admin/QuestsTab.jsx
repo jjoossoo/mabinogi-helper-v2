@@ -322,8 +322,8 @@ function QuestModal({ quest, items, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="panel dots-bg w-full max-w-lg rounded-xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:px-4">
+      <div className="panel dots-bg w-full sm:max-w-lg rounded-t-xl sm:rounded-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col">
 
         <div
           className="flex items-center justify-between px-5 py-4"
@@ -477,21 +477,24 @@ export default function QuestsTab({ quests, setQuests, items }) {
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--panel-bg)' }}>
       <div
-        className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+        className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 md:px-5 py-3 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}
       >
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap flex-1">
           {['전체', ...CATEGORIES].map(cat => (
             <button key={cat} onClick={() => setFilterCategory(cat)}
-              className="px-3 py-1 rounded text-xs font-medium transition-colors"
-              style={filterCategory === cat
-                ? { backgroundColor: 'var(--gold)', color: 'var(--ink)', fontWeight: 600 }
-                : { color: 'var(--gold-dark)', border: '1px solid var(--gold)', background: 'transparent' }
-              }>{cat}</button>
+              className="px-3 rounded text-xs font-medium transition-colors"
+              style={{
+                minHeight: '36px',
+                ...(filterCategory === cat
+                  ? { backgroundColor: 'var(--gold)', color: 'var(--ink)', fontWeight: 600 }
+                  : { color: 'var(--gold-dark)', border: '1px solid var(--gold)', background: 'transparent' })
+              }}>{cat}</button>
           ))}
         </div>
         <button onClick={() => setModal('add')}
-          className="btn-primary text-sm px-3 py-1.5 rounded ml-2">
+          className="btn-primary text-sm w-full sm:w-auto px-4 sm:px-3 rounded flex-shrink-0"
+          style={{ minHeight: '44px' }}>
           + 퀘스트 추가
         </button>
       </div>

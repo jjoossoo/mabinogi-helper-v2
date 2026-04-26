@@ -37,8 +37,8 @@ export default function MembersTab({ members, setMembers }) {
       <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}>
         <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.6 }}>전체 {members.length}명</span>
       </div>
-      <div className="flex-1 overflow-y-auto dots-bg">
-        <table className="w-full text-sm">
+      <div className="flex-1 overflow-y-auto overflow-x-auto dots-bg">
+        <table className="w-full text-sm min-w-[560px]">
           <thead className="sticky top-0" style={{ backgroundColor: 'var(--parchment-dark)' }}>
             <tr>
               <th className="text-left px-5 py-2.5 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>이메일</th>
