@@ -37,6 +37,55 @@ function groupByLocationNpc(tradeList) {
 const SCOPE_LABELS = { character: '캐릭터', server: '서버' }
 const CYCLE_LABELS = { daily: '일일', weekly: '주간' }
 
+function isTradesDone(list, progress) {
+  return list.length > 0 && list.every(t => {
+    const prog = progress[t.id]
+    return prog?.completed && !isExpired(prog, t.reset_cycle)
+  })
+}
+
+function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
+  const allDone = isTradesDone(list, progress)
+  const [open, setOpen] = useState(!allDone)
+
+  useEffect(() => {
+    if (allDone) setOpen(false)
+  }, [allDone])
+
+  return (
+    <div className="panel rounded-lg overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 flex items-center gap-2 text-left"
+        style={{
+          backgroundColor: allDone ? 'rgba(74,124,95,0.06)' : 'rgba(201,168,76,0.06)',
+          borderBottom: open ? '1px solid rgba(201,168,76,0.2)' : 'none',
+        }}>
+        <span className="font-serif font-semibold text-sm flex-1"
+          style={{ color: allDone ? 'var(--sage)' : 'var(--gold-dark)' }}>
+          {allDone && '✓ '}🏪 {npc}
+        </span>
+        <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>
+          {open ? '▼' : '▶'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="divide-y" style={{ borderColor: 'rgba(201,168,76,0.15)' }}>
+          {list.map(trade => (
+            <TradeRow
+              key={trade.id}
+              trade={trade}
+              prog={progress[trade.id]}
+              onToggle={() => onToggle(trade)}
+              onRemove={() => onRemove(trade)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TradeRow({ trade, prog, onToggle, onRemove }) {
   const done = prog?.completed && !isExpired(prog, trade.reset_cycle)
 
@@ -203,7 +252,6 @@ export default function TradesPanel({ character }) {
   const [trades, setTrades] = useState([])
   const [progress, setProgress] = useState({})
   const [collapsedLocs, setCollapsedLocs] = useState(new Set())
-  const [collapsedNpcs, setCollapsedNpcs] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [, startTransition] = useTransition()
@@ -243,9 +291,6 @@ export default function TradesPanel({ character }) {
 
   function toggleLoc(loc) {
     setCollapsedLocs(prev => { const n = new Set(prev); n.has(loc) ? n.delete(loc) : n.add(loc); return n })
-  }
-  function toggleNpc(key) {
-    setCollapsedNpcs(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n })
   }
 
   async function handleAdd(trade) {
@@ -350,42 +395,16 @@ export default function TradesPanel({ character }) {
 
               {!locCollapsed && (
                 <div className="space-y-3 pl-2">
-                  {Object.entries(npcGroups).map(([npc, list]) => {
-                    const npcKey = `${loc}::${npc}`
-                    const npcCollapsed = collapsedNpcs.has(npcKey)
-                    return (
-                      <div key={npc} className="panel rounded-lg overflow-hidden">
-                        {/* NPC 토글 헤더 */}
-                        <button type="button" onClick={() => toggleNpc(npcKey)}
-                          className="w-full px-4 py-2.5 flex items-center gap-2 text-left"
-                          style={{
-                            backgroundColor: 'rgba(201,168,76,0.06)',
-                            borderBottom: npcCollapsed ? 'none' : '1px solid rgba(201,168,76,0.2)',
-                          }}>
-                          <span className="font-serif font-semibold text-sm flex-1" style={{ color: 'var(--gold-dark)' }}>
-                            🏪 {npc}
-                          </span>
-                          <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>
-                            {npcCollapsed ? '▶' : '▼'}
-                          </span>
-                        </button>
-
-                        {!npcCollapsed && (
-                          <div className="divide-y" style={{ borderColor: 'rgba(201,168,76,0.15)' }}>
-                            {list.map(trade => (
-                              <TradeRow
-                                key={trade.id}
-                                trade={trade}
-                                prog={progress[trade.id]}
-                                onToggle={() => handleToggle(trade)}
-                                onRemove={() => handleRemove(trade)}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                  {Object.entries(npcGroups).map(([npc, list]) => (
+                    <NpcGroup
+                      key={npc}
+                      npc={npc}
+                      list={list}
+                      progress={progress}
+                      onToggle={handleToggle}
+                      onRemove={handleRemove}
+                    />
+                  ))}
                 </div>
               )}
             </div>

@@ -5,21 +5,24 @@ import ItemsTab from './ItemsTab'
 import QuestsTab from './QuestsTab'
 import MembersTab from './MembersTab'
 import TradesTab from './TradesTab'
+import ContentsTab from './ContentsTab'
 
 const TABS = [
   { id: 'items', label: '아이템 관리' },
   { id: 'quests', label: '퀘스트/미션 관리' },
   { id: 'trades', label: '물물교환 관리' },
+  { id: 'contents', label: '콘텐츠 관리' },
   { id: 'members', label: '회원 관리' },
 ]
 
-export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades }) {
+export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades, initialContents }) {
   const [activeTab, setActiveTab] = useState('items')
   const [categories, setCategories] = useState(initialCategories)
   const [items, setItems] = useState(initialItems)
   const [quests, setQuests] = useState(initialQuests)
   const [members, setMembers] = useState(initialMembers)
   const [trades, setTrades] = useState(initialTrades)
+  const [contents, setContents] = useState(initialContents)
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -71,6 +74,9 @@ export default function AdminView({ initialCategories, initialItems, initialQues
         )}
         {activeTab === 'trades' && (
           <TradesTab trades={trades} setTrades={setTrades} items={items} />
+        )}
+        {activeTab === 'contents' && (
+          <ContentsTab contents={contents} setContents={setContents} items={items} />
         )}
         {activeTab === 'members' && (
           <MembersTab members={members} setMembers={setMembers} />

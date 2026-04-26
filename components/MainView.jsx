@@ -7,11 +7,13 @@ import CharacterModal from './CharacterModal'
 import QuestsPanel from './tabs/QuestsPanel'
 import MaterialsPanel from './tabs/MaterialsPanel'
 import TradesPanel from './tabs/TradesPanel'
+import ContentsPanel from './tabs/ContentsPanel'
 
 const CLASS_MAP = Object.fromEntries(CLASSES.map(c => [c.id, c]))
 
 const TABS = [
   { id: 'quests', label: '퀘스트/미션' },
+  { id: 'contents', label: '콘텐츠' },
   { id: 'trades', label: '물물교환' },
   { id: 'materials', label: '재료 계산기' },
 ]
@@ -34,6 +36,7 @@ export default function MainView({ initialCharacters }) {
   }
 
   function handleDelete(char) {
+    if (!confirm(`'${char.name}' 캐릭터를 삭제할까요?`)) return
     setCharacters(prev => prev.filter(c => c.id !== char.id))
     if (selectedId === char.id) {
       const remaining = characters.filter(c => c.id !== char.id)
@@ -254,6 +257,8 @@ export default function MainView({ initialCharacters }) {
               </div>
             ) : activeTab === 'quests' ? (
               <QuestsPanel characterId={selectedChar.id} />
+            ) : activeTab === 'contents' ? (
+              <ContentsPanel characterId={selectedChar.id} />
             ) : activeTab === 'trades' ? (
               <TradesPanel character={selectedChar} />
             ) : (

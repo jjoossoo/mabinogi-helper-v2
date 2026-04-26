@@ -62,30 +62,32 @@ function isQuestDone(quest, progress) {
 function ConditionRow({ cond, progress, onChange }) {
   const val = progress[cond.id] ?? 0
   const done = isCondDone(cond, progress)
-  return (
-    <div className="flex items-center gap-3">
-      {cond.type === 'check' ? (
+  const nameStyle = {
+    color: done ? 'var(--sage)' : 'var(--ink)',
+    textDecoration: done ? 'line-through' : 'none',
+    opacity: done ? 0.7 : 1,
+  }
+
+  if (cond.type === 'check') {
+    return (
+      <div className="flex items-center gap-3">
         <input type="checkbox" checked={val >= 1}
           onChange={e => onChange(cond.id, 'check', e.target.checked)}
           className="w-4 h-4 flex-shrink-0"
           style={{ accentColor: 'var(--sage)' }} />
-      ) : (
-        <input type="number" value={val} min={0} max={cond.max_value ?? undefined}
-          onChange={e => onChange(cond.id, 'progress', e.target.value)}
-          onFocus={e => e.target.select()}
-          className="input-field w-16 rounded px-2 py-0.5 text-xs text-center flex-shrink-0" />
-      )}
-      <span
-        className="text-xs flex-1"
-        style={{
-          color: done ? 'var(--sage)' : 'var(--ink)',
-          textDecoration: done ? 'line-through' : 'none',
-          opacity: done ? 0.7 : 1,
-        }}
-      >
-        {cond.name}
-      </span>
-      {cond.type === 'progress' && cond.max_value != null && (
+        <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
+      <input type="number" value={val} min={0} max={cond.max_value ?? undefined}
+        onChange={e => onChange(cond.id, 'progress', e.target.value)}
+        onFocus={e => e.target.select()}
+        className="input-field w-16 rounded px-2 py-0.5 text-xs text-center flex-shrink-0" />
+      {cond.max_value != null && (
         <span className="text-xs flex-shrink-0" style={{ color: 'var(--ink)', opacity: 0.45 }}>
           / {cond.max_value}
         </span>
@@ -137,10 +139,14 @@ function MissionDisplay({ mission, progress, onChange }) {
 }
 
 function SectionDisplay({ section, progress, onChange }) {
-  const [open, setOpen] = useState(true)
   const missions = (section.quest_section_missions ?? []).sort((a, b) => a.sort_order - b.sort_order)
   const done = isSectionDone(section, progress)
   const doneCount = missions.filter(m => isMissionDone(m, progress)).length
+  const [open, setOpen] = useState(!done)
+
+  useEffect(() => {
+    if (done) setOpen(false)
+  }, [done])
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(138,106,31,0.35)' }}>
@@ -186,69 +192,80 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
 
   const simpleConditions = (quest.quest_conditions ?? []).sort((a, b) => a.sort_order - b.sort_order)
   const simpleDone = simpleConditions.filter(c => isCondDone(c, progress)).length
-
   const sections = (quest.quest_sections ?? []).sort((a, b) => a.sort_order - b.sort_order)
+
+  const [open, setOpen] = useState(!done)
+  useEffect(() => {
+    if (done) setOpen(false)
+  }, [done])
 
   return (
     <div
-      className="panel dots-bg rounded-lg p-3 transition-colors"
+      className="panel dots-bg rounded-lg overflow-hidden transition-colors"
       style={done ? { borderColor: 'var(--sage)', boxShadow: '0 2px 12px rgba(74,124,95,0.2)' } : {}}
     >
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <span
-            className="font-medium text-sm"
-            style={{ color: done ? 'var(--sage)' : 'var(--ink)' }}
-          >
+      {/* 헤더 (토글) */}
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+        onClick={() => setOpen(o => !o)}
+        style={{ backgroundColor: done ? 'rgba(74,124,95,0.05)' : 'transparent' }}
+      >
+        <span className="text-xs flex-shrink-0" style={{ color: done ? 'var(--sage)' : 'var(--ink)', opacity: 0.5 }}>
+          {open ? '▼' : '▶'}
+        </span>
+        <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+          <span className="font-medium text-sm" style={{ color: done ? 'var(--sage)' : 'var(--ink)' }}>
             {done && '✓ '}{quest.name}
           </span>
           {quest.deadline && (
             <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
               {formatDeadline(quest.deadline)}
               {isExpired(quest.deadline) && (
-                <span
-                  className="ml-1 text-xs px-1 py-0.5 rounded"
-                  style={{ background: 'rgba(139,32,32,0.12)', border: '1px solid var(--crimson)', color: 'var(--crimson-light)' }}
-                >마감</span>
+                <span className="ml-1 text-xs px-1 py-0.5 rounded"
+                  style={{ background: 'rgba(139,32,32,0.12)', border: '1px solid var(--crimson)', color: 'var(--crimson-light)' }}>마감</span>
               )}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
           {!isHierarchical && simpleConditions.length > 0 && (
             <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
               {simpleDone}/{simpleConditions.length}
             </span>
           )}
           <button onClick={onRemove} title="목록에서 제거"
-            className="text-xs transition-opacity hover:opacity-70"
+            className="text-xs transition-opacity hover:opacity-70 p-0.5"
             style={{ color: 'var(--crimson-light)' }}>✕</button>
         </div>
       </div>
 
-      {/* 단순형 */}
-      {!isHierarchical && (
-        <>
-          {simpleConditions.length > 0 && (
-            <div className="space-y-2">
-              {simpleConditions.map(cond => (
-                <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChangeCondition} />
-              ))}
-            </div>
+      {/* 본문 */}
+      {open && (
+        <div className="px-3 pb-3 pt-2" style={{ borderTop: '1px solid rgba(138,106,31,0.18)' }}>
+          {/* 단순형 */}
+          {!isHierarchical && (
+            <>
+              {simpleConditions.length > 0 && (
+                <div className="space-y-2">
+                  {simpleConditions.map(cond => (
+                    <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChangeCondition} />
+                  ))}
+                </div>
+              )}
+              <RewardBadges rewards={quest.quest_rewards} />
+            </>
           )}
-          <RewardBadges rewards={quest.quest_rewards} />
-        </>
-      )}
 
-      {/* 계층형 */}
-      {isHierarchical && (
-        <div className="space-y-2">
-          {sections.map(section => (
-            <SectionDisplay key={section.id} section={section} progress={progress} onChange={onChangeCondition} />
-          ))}
-          {sections.length === 0 && (
-            <p className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>분류가 없습니다</p>
+          {/* 계층형 */}
+          {isHierarchical && (
+            <div className="space-y-2">
+              {sections.map(section => (
+                <SectionDisplay key={section.id} section={section} progress={progress} onChange={onChangeCondition} />
+              ))}
+              {sections.length === 0 && (
+                <p className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>분류가 없습니다</p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -351,13 +368,16 @@ export default function QuestsPanel({ characterId }) {
     setLoading(true)
     async function fetchData() {
       const supabase = createClient()
-      const [{ data: questData }, { data: selectedData }, { data: progressData }] = await Promise.all([
+      const [{ data: questData }, { data: selectedData }, { data: progressData, error: progressErr }] = await Promise.all([
         supabase.from('quests').select(QUEST_SELECT).order('name'),
         supabase.from('character_quests').select('quest_id').eq('character_id', characterId),
         supabase.from('quest_progress').select('condition_id, value').eq('character_id', characterId),
       ])
       setAllQuests(questData ?? [])
       setSelectedIds(new Set((selectedData ?? []).map(r => r.quest_id)))
+      if (progressErr) {
+        setToggleError('진행상황 로드 실패: ' + progressErr.message)
+      }
       setProgress(Object.fromEntries((progressData ?? []).map(p => [p.condition_id, p.value])))
       setLoading(false)
     }
@@ -389,9 +409,14 @@ export default function QuestsPanel({ characterId }) {
 
   function handleChangeCondition(conditionId, type, rawValue) {
     const value = type === 'check' ? (rawValue ? 1 : 0) : (parseInt(rawValue) || 0)
+    const oldValue = progress[conditionId] ?? 0
     setProgress(prev => ({ ...prev, [conditionId]: value }))
     startTransition(async () => {
-      await upsertProgress(characterId, conditionId, value)
+      const result = await upsertProgress(characterId, conditionId, value)
+      if (result?.error) {
+        setProgress(prev => ({ ...prev, [conditionId]: oldValue }))
+        setToggleError('저장 실패: ' + result.error)
+      }
     })
   }
 
