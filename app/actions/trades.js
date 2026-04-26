@@ -16,10 +16,10 @@ const TRADE_SELECT = '*, give_item:give_item_id(id, name, emoji), receive_item:r
 export async function addTrade(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { npc_name, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle } = data
+  const { npc_name, location, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle } = data
   const { data: trade, error } = await db
     .from('trades')
-    .insert({ npc_name, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle })
+    .insert({ npc_name, location: location ?? '', give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle })
     .select(TRADE_SELECT)
     .single()
   if (error) return { error: error.message }
@@ -29,10 +29,10 @@ export async function addTrade(data) {
 export async function updateTrade(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { npc_name, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle } = data
+  const { npc_name, location, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle } = data
   const { data: trade, error } = await db
     .from('trades')
-    .update({ npc_name, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle })
+    .update({ npc_name, location: location ?? '', give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_cycle })
     .eq('id', id)
     .select(TRADE_SELECT)
     .single()
@@ -44,6 +44,22 @@ export async function deleteTrade(id) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
   const { error } = await db.from('trades').delete().eq('id', id)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function removeTradeProgress({ trade_id, character_id, server }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: '로그인 필요' }
+
+  let query = supabase.from('trade_progress').delete().eq('user_id', user.id).eq('trade_id', trade_id)
+  if (character_id) {
+    query = query.eq('character_id', character_id)
+  } else {
+    query = query.is('character_id', null).eq('server', server)
+  }
+  const { error } = await query
   if (error) return { error: error.message }
   return { success: true }
 }
