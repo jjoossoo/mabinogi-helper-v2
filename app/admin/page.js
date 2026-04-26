@@ -18,6 +18,7 @@ export default async function AdminPage() {
     { data: items, error: itemsErr },
     { data: quests, error: questsErr },
     { data: profiles, error: profilesErr },
+    { data: trades },
   ] = await Promise.all([
     admin.from('item_categories').select('*').order('name'),
     admin.from('items')
@@ -27,6 +28,9 @@ export default async function AdminPage() {
       .select('*, quest_conditions(id, name, type, max_value, sort_order), quest_rewards(id, item_id, amount, items(name, emoji)), quest_sections(id, name, sort_order, quest_section_missions(id, name, sort_order, quest_mission_conditions(id, name, type, max_value, sort_order), quest_mission_rewards(id, item_id, amount, items(name, emoji))))')
       .order('name'),
     admin.from('profiles').select('user_id, role, created_at'),
+    admin.from('trades')
+      .select('*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji)')
+      .order('npc_name'),
   ])
   const { data: { users } } = await admin.auth.admin.listUsers()
   const roleMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p]))
@@ -43,6 +47,7 @@ export default async function AdminPage() {
       initialItems={items ?? []}
       initialQuests={quests ?? []}
       initialMembers={members}
+      initialTrades={trades ?? []}
     />
   )
 }

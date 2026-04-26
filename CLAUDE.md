@@ -63,3 +63,16 @@ const supabase = await createClient()
 NEXT_PUBLIC_SUPABASE_URL      # Supabase 프로젝트 URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon 공개 키
 ```
+
+## 주요 기능
+
+### 물물교환 (trades)
+- `trades` 테이블: NPC별 교환 정보 (give/receive 아이템·수량, scope, reset_cycle)
+- `trade_progress` 테이블: 유저별 완료 기록 (partial unique indexes)
+  - `character_id IS NOT NULL` → `(user_id, character_id, trade_id)` 유니크
+  - `character_id IS NULL` → `(user_id, server, trade_id)` 유니크
+- `scope`: `'character'` (캐릭터별) / `'server'` (서버 공통)
+- `reset_cycle`: `'daily'` / `'weekly'` — 클라이언트에서 KST 자정/주 기준으로 만료 체크
+- `upsertTradeProgress`: partial index 때문에 select-then-update-or-insert 패턴 사용
+- 관리자: `components/admin/TradesTab.jsx` / `app/actions/trades.js`
+- 유저 탭: `components/tabs/TradesPanel.jsx` — optimistic toggle

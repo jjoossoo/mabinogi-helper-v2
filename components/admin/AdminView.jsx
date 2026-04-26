@@ -4,19 +4,22 @@ import { useState } from 'react'
 import ItemsTab from './ItemsTab'
 import QuestsTab from './QuestsTab'
 import MembersTab from './MembersTab'
+import TradesTab from './TradesTab'
 
 const TABS = [
   { id: 'items', label: '아이템 관리' },
   { id: 'quests', label: '퀘스트/미션 관리' },
+  { id: 'trades', label: '물물교환 관리' },
   { id: 'members', label: '회원 관리' },
 ]
 
-export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers }) {
+export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades }) {
   const [activeTab, setActiveTab] = useState('items')
   const [categories, setCategories] = useState(initialCategories)
   const [items, setItems] = useState(initialItems)
   const [quests, setQuests] = useState(initialQuests)
   const [members, setMembers] = useState(initialMembers)
+  const [trades, setTrades] = useState(initialTrades)
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -65,6 +68,9 @@ export default function AdminView({ initialCategories, initialItems, initialQues
             quests={quests} setQuests={setQuests}
             items={items}
           />
+        )}
+        {activeTab === 'trades' && (
+          <TradesTab trades={trades} setTrades={setTrades} items={items} />
         )}
         {activeTab === 'members' && (
           <MembersTab members={members} setMembers={setMembers} />

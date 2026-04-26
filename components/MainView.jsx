@@ -6,11 +6,13 @@ import { CLASSES } from '@/data/classes'
 import CharacterModal from './CharacterModal'
 import QuestsPanel from './tabs/QuestsPanel'
 import MaterialsPanel from './tabs/MaterialsPanel'
+import TradesPanel from './tabs/TradesPanel'
 
 const CLASS_MAP = Object.fromEntries(CLASSES.map(c => [c.id, c]))
 
 const TABS = [
   { id: 'quests', label: '퀘스트/미션' },
+  { id: 'trades', label: '물물교환' },
   { id: 'materials', label: '재료 계산기' },
 ]
 
@@ -252,6 +254,8 @@ export default function MainView({ initialCharacters }) {
               </div>
             ) : activeTab === 'quests' ? (
               <QuestsPanel characterId={selectedChar.id} />
+            ) : activeTab === 'trades' ? (
+              <TradesPanel character={selectedChar} />
             ) : (
               <MaterialsPanel />
             )}
