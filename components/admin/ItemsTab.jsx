@@ -50,90 +50,116 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-lg bg-slate-800 border border-amber-900/50 rounded-lg shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-amber-900/30">
-          <h3 className="text-amber-300 font-semibold">{item ? '아이템 수정' : '아이템 추가'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="panel dots-bg w-full max-w-lg rounded-xl max-h-[90vh] flex flex-col">
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid rgba(201,168,76,0.35)' }}
+        >
+          <h3 className="font-serif font-semibold" style={{ color: 'var(--gold-dark)' }}>
+            ✦ {item ? '아이템 수정' : '아이템 추가'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-xl leading-none transition-opacity hover:opacity-60"
+            style={{ color: 'var(--ink)' }}
+          >✕</button>
         </div>
+
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {error && <p className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded px-3 py-2">{error}</p>}
+          {error && (
+            <p className="text-sm rounded px-3 py-2" style={{
+              background: 'rgba(139,32,32,0.1)',
+              border: '1px solid var(--crimson)',
+              color: 'var(--crimson-light)',
+            }}>{error}</p>
+          )}
 
           <div className="grid grid-cols-[3rem_1fr] gap-2">
             <div>
-              <label className="block text-slate-300 text-xs mb-1">아이콘</label>
+              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>아이콘</label>
               <input value={form.emoji} onChange={e => set('emoji', e.target.value)} maxLength={4}
-                className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-2 text-center text-lg focus:outline-none focus:border-amber-500" />
+                className="input-field w-full rounded px-2 py-2 text-center text-lg" />
             </div>
             <div>
-              <label className="block text-slate-300 text-xs mb-1">아이템명 *</label>
+              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>아이템명 *</label>
               <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="아이템명"
-                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-amber-500" />
+                className="input-field w-full rounded px-3 py-2 text-sm" />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 text-xs mb-1">카테고리</label>
+            <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>카테고리</label>
             <select value={form.category_id} onChange={e => set('category_id', e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-amber-500">
+              className="input-field w-full rounded px-3 py-2 text-sm">
               <option value="">미분류</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-slate-300 text-xs mb-1">설명</label>
+            <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>설명</label>
             <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 resize-none" />
+              className="input-field w-full rounded px-3 py-2 text-sm resize-none" />
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.craftable} onChange={e => set('craftable', e.target.checked)} className="accent-amber-500" />
-            <span className="text-slate-300 text-sm">제작 가능 아이템</span>
+            <input type="checkbox" checked={form.craftable}
+              onChange={e => set('craftable', e.target.checked)}
+              style={{ accentColor: 'var(--sage)' }} />
+            <span className="text-sm" style={{ color: 'var(--ink)' }}>제작 가능 아이템</span>
           </label>
 
-          {form.craftable && <>
-            <div>
-              <label className="block text-slate-300 text-xs mb-1">1회 생산량</label>
-              <input type="number" value={form.craft_output} min={1}
-                onChange={e => set('craft_output', parseInt(e.target.value) || 1)}
-                onFocus={e => e.target.select()}
-                className="w-32 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-amber-500" />
-            </div>
+          {form.craftable && (
+            <>
+              <div>
+                <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>1회 생산량</label>
+                <input type="number" value={form.craft_output} min={1}
+                  onChange={e => set('craft_output', parseInt(e.target.value) || 1)}
+                  onFocus={e => e.target.select()}
+                  className="input-field w-32 rounded px-3 py-2 text-sm" />
+              </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-slate-300 text-xs">재료 목록</label>
-                <button type="button" onClick={addMaterial}
-                  className="text-xs text-amber-400 hover:text-amber-300 border border-amber-800/50 px-2 py-0.5 rounded">+ 재료 추가</button>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium" style={{ color: 'var(--ink)' }}>재료 목록</label>
+                  <button type="button" onClick={addMaterial}
+                    className="btn-ghost-sm px-2 py-0.5 rounded">+ 재료 추가</button>
+                </div>
+                <div className="space-y-2">
+                  {form.materials.map((mat, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <select value={mat.material_id}
+                        onChange={e => updateMaterial(i, 'material_id', e.target.value)}
+                        className="input-field flex-1 rounded px-2 py-1.5 text-xs">
+                        <option value="">아이템 선택</option>
+                        {items.filter(it => it.id !== item?.id).map(it => (
+                          <option key={it.id} value={it.id}>{it.emoji} {it.name}</option>
+                        ))}
+                      </select>
+                      <input type="number" value={mat.amount} min={1}
+                        onChange={e => updateMaterial(i, 'amount', parseInt(e.target.value) || 1)}
+                        onFocus={e => e.target.select()}
+                        className="input-field w-16 rounded px-2 py-1.5 text-xs text-center" />
+                      <button type="button" onClick={() => removeMaterial(i)}
+                        className="text-xs px-1 transition-opacity hover:opacity-70"
+                        style={{ color: 'var(--crimson-light)' }}>✕</button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                {form.materials.map((mat, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <select value={mat.material_id} onChange={e => updateMaterial(i, 'material_id', e.target.value)}
-                      className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-slate-100 text-xs focus:outline-none focus:border-amber-500">
-                      <option value="">아이템 선택</option>
-                      {items.filter(it => it.id !== item?.id).map(it => (
-                        <option key={it.id} value={it.id}>{it.emoji} {it.name}</option>
-                      ))}
-                    </select>
-                    <input type="number" value={mat.amount} min={1}
-                      onChange={e => updateMaterial(i, 'amount', parseInt(e.target.value) || 1)}
-                      onFocus={e => e.target.select()}
-                      className="w-16 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-slate-100 text-xs focus:outline-none focus:border-amber-500 text-center" />
-                    <button type="button" onClick={() => removeMaterial(i)}
-                      className="text-slate-500 hover:text-red-400 text-xs px-1">✕</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>}
+            </>
+          )}
         </form>
-        <div className="flex gap-3 px-5 py-4 border-t border-amber-900/20">
+
+        <div
+          className="flex gap-3 px-5 py-4"
+          style={{ borderTop: '1px solid rgba(201,168,76,0.3)' }}
+        >
           <button type="button" onClick={onClose}
-            className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2 rounded text-sm">취소</button>
+            className="btn-danger flex-1 py-2 rounded text-sm">취소</button>
           <button onClick={handleSubmit} disabled={isPending}
-            className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-semibold py-2 rounded text-sm">
+            className="btn-primary flex-1 py-2 rounded text-sm">
             {isPending ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -144,7 +170,7 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
 
 export default function ItemsTab({ categories, setCategories, items, setItems }) {
   const [filterCategoryId, setFilterCategoryId] = useState(null)
-  const [modal, setModal] = useState(null) // null | 'add' | item object
+  const [modal, setModal] = useState(null)
   const [newCatName, setNewCatName] = useState('')
   const [catError, setCatError] = useState(null)
   const [isPending, startTransition] = useTransition()
@@ -194,82 +220,120 @@ export default function ItemsTab({ categories, setCategories, items, setItems })
   return (
     <div className="flex h-full">
       {/* 카테고리 사이드바 */}
-      <aside className="w-52 flex-shrink-0 border-r border-amber-900/20 flex flex-col bg-slate-800/30 overflow-y-auto">
-        <div className="p-3 border-b border-amber-900/20">
-          <p className="text-amber-400 text-xs font-semibold mb-2">카테고리</p>
+      <aside
+        className="w-52 flex-shrink-0 flex flex-col overflow-y-auto"
+        style={{
+          backgroundColor: 'var(--parchment-dark)',
+          borderRight: '1px solid rgba(138,106,31,0.35)',
+        }}
+      >
+        <div className="p-3" style={{ borderBottom: '1px solid rgba(138,106,31,0.25)' }}>
+          <p className="font-serif font-semibold text-xs mb-2" style={{ color: 'var(--gold-dark)' }}>✦ 카테고리</p>
           <div className="flex gap-1">
             <input value={newCatName} onChange={e => setNewCatName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
               placeholder="새 카테고리"
-              className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-slate-100 text-xs focus:outline-none focus:border-amber-500" />
-            <button onClick={handleAddCategory} className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-2 py-1 rounded">+</button>
+              className="input-field flex-1 rounded px-2 py-1 text-xs" />
+            <button onClick={handleAddCategory}
+              className="btn-primary text-xs px-2 py-1 rounded font-bold">+</button>
           </div>
-          {catError && <p className="text-red-400 text-xs mt-1">{catError}</p>}
+          {catError && <p className="text-xs mt-1" style={{ color: 'var(--crimson-light)' }}>{catError}</p>}
         </div>
         <ul className="flex-1 py-1">
           <li>
-            <button onClick={() => setFilterCategoryId(null)}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors ${!filterCategoryId ? 'text-amber-400 bg-amber-900/20' : 'text-slate-300 hover:bg-slate-700/40'}`}>
+            <button
+              onClick={() => setFilterCategoryId(null)}
+              className="w-full text-left px-3 py-2 text-sm transition-colors"
+              style={{
+                color: !filterCategoryId ? 'var(--gold-dark)' : 'var(--ink)',
+                backgroundColor: !filterCategoryId ? 'rgba(201,168,76,0.18)' : 'transparent',
+                fontWeight: !filterCategoryId ? 600 : 400,
+              }}
+            >
               전체 ({items.length})
             </button>
           </li>
           {categories.map(cat => (
             <li key={cat.id} className="group flex items-center">
-              <button onClick={() => setFilterCategoryId(cat.id)}
-                className={`flex-1 text-left px-3 py-2 text-sm transition-colors ${filterCategoryId === cat.id ? 'text-amber-400 bg-amber-900/20' : 'text-slate-300 hover:bg-slate-700/40'}`}>
+              <button
+                onClick={() => setFilterCategoryId(cat.id)}
+                className="flex-1 text-left px-3 py-2 text-sm transition-colors"
+                style={{
+                  color: filterCategoryId === cat.id ? 'var(--gold-dark)' : 'var(--ink)',
+                  backgroundColor: filterCategoryId === cat.id ? 'rgba(201,168,76,0.18)' : 'transparent',
+                  fontWeight: filterCategoryId === cat.id ? 600 : 400,
+                }}
+              >
                 {cat.name} ({items.filter(i => i.category_id === cat.id).length})
               </button>
-              <button onClick={() => handleDeleteCategory(cat.id)}
-                className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 text-xs px-2 py-2 transition-all">✕</button>
+              <button
+                onClick={() => handleDeleteCategory(cat.id)}
+                className="opacity-0 group-hover:opacity-100 text-xs px-2 py-2 transition-all"
+                style={{ color: 'var(--crimson-light)' }}
+              >✕</button>
             </li>
           ))}
         </ul>
       </aside>
 
       {/* 아이템 목록 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-amber-900/20">
-          <span className="text-slate-400 text-sm">{filteredItems.length}개 아이템</span>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--panel-bg)' }}>
+        <div
+          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(138,106,31,0.25)' }}
+        >
+          <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.55 }}>{filteredItems.length}개 아이템</span>
           <button onClick={() => setModal('add')}
-            className="bg-amber-700 hover:bg-amber-600 text-white text-sm px-3 py-1.5 rounded transition-colors">
+            className="btn-primary text-sm px-3 py-1.5 rounded">
             + 아이템 추가
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto dots-bg">
           <table className="w-full text-sm">
-            <thead className="bg-slate-800/60 sticky top-0">
+            <thead className="sticky top-0" style={{ backgroundColor: 'var(--parchment-dark)' }}>
               <tr>
-                <th className="text-left px-4 py-2 text-slate-400 font-medium">아이템</th>
-                <th className="text-left px-4 py-2 text-slate-400 font-medium">카테고리</th>
-                <th className="text-left px-4 py-2 text-slate-400 font-medium">제작</th>
-                <th className="px-4 py-2"></th>
+                <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>아이템</th>
+                <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>카테고리</th>
+                <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>제작</th>
+                <th className="px-4 py-2" style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/40">
-              {filteredItems
-                .filter(item => item != null) /* 💡 마법의 한 줄: null인 데이터를 아예 걸러냅니다! */
-                .map(item => (
-                <tr key={item.id} className="hover:bg-slate-700/20 transition-colors">
+            <tbody>
+              {filteredItems.filter(item => item != null).map((item, idx) => (
+                <tr
+                  key={item.id}
+                  className="transition-colors"
+                  style={{
+                    backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(138,106,31,0.04)',
+                    borderBottom: '1px solid rgba(138,106,31,0.12)',
+                  }}
+                >
                   <td className="px-4 py-2.5">
                     <span className="mr-2">{item.emoji}</span>
-                    <span className="text-slate-200">{item.name}</span>
+                    <span style={{ color: 'var(--ink)' }}>{item.name}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-400 text-xs">{item.item_categories?.name ?? '미분류'}</td>
-                  <td className="px-4 py-2.5 text-slate-400 text-xs">
+                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--ink)', opacity: 0.55 }}>
+                    {item.item_categories?.name ?? '미분류'}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--ink)', opacity: 0.55 }}>
                     {item.craft_output ? `${item.craft_output}개씩` : '-'}
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => setModal(item)}
-                        className="text-xs text-amber-400 hover:text-amber-300 border border-amber-800/40 px-2 py-1 rounded">수정</button>
+                        className="btn-ghost-sm px-2 py-1 rounded">수정</button>
                       <button onClick={() => handleDeleteItem(item.id)}
-                        className="text-xs text-slate-400 hover:text-red-400 border border-slate-600/40 px-2 py-1 rounded">삭제</button>
+                        className="btn-danger text-xs px-2 py-1 rounded">삭제</button>
                     </div>
                   </td>
                 </tr>
               ))}
               {filteredItems.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-600 text-sm">아이템이 없습니다</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink)', opacity: 0.4 }}>
+                    아이템이 없습니다
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

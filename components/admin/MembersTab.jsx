@@ -33,46 +33,59 @@ export default function MembersTab({ members, setMembers }) {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-5 py-3 border-b border-amber-900/20 flex-shrink-0">
-        <span className="text-slate-400 text-sm">전체 {members.length}명</span>
+    <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--panel-bg)' }}>
+      <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}>
+        <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.6 }}>전체 {members.length}명</span>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto dots-bg">
         <table className="w-full text-sm">
-          <thead className="bg-slate-800/60 sticky top-0">
+          <thead className="sticky top-0" style={{ backgroundColor: 'var(--parchment-dark)' }}>
             <tr>
-              <th className="text-left px-5 py-2.5 text-slate-400 font-medium">이메일</th>
-              <th className="text-left px-4 py-2.5 text-slate-400 font-medium">가입일</th>
-              <th className="text-left px-4 py-2.5 text-slate-400 font-medium">권한</th>
-              <th className="px-4 py-2.5"></th>
+              <th className="text-left px-5 py-2.5 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>이메일</th>
+              <th className="text-left px-4 py-2.5 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>가입일</th>
+              <th className="text-left px-4 py-2.5 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>권한</th>
+              <th className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-700/40">
-            {members.map(member => {
+          <tbody>
+            {members.map((member, idx) => {
               const isProcessing = processingId === member.id
               return (
-                <tr key={member.id} className="hover:bg-slate-700/20 transition-colors">
-                  <td className="px-5 py-3 text-slate-200">{member.email}</td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">
+                <tr
+                  key={member.id}
+                  className="transition-colors"
+                  style={{
+                    backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(138,106,31,0.04)',
+                    borderBottom: '1px solid rgba(138,106,31,0.15)',
+                  }}
+                >
+                  <td className="px-5 py-3" style={{ color: 'var(--ink)' }}>{member.email}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--ink)', opacity: 0.55 }}>
                     {new Date(member.created_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                      member.role === 'admin'
-                        ? 'bg-amber-900/40 text-amber-400 border border-amber-700/40'
-                        : 'bg-slate-700/40 text-slate-400 border border-slate-600/40'
-                    }`}>
+                    <span
+                      className="text-xs font-medium px-2 py-0.5 rounded"
+                      style={member.role === 'admin'
+                        ? { background: 'rgba(201,168,76,0.18)', color: 'var(--gold-dark)', border: '1px solid var(--gold)' }
+                        : { background: 'rgba(45,31,10,0.08)', color: 'var(--ink)', opacity: 0.6, border: '1px solid rgba(138,106,31,0.3)' }
+                      }
+                    >
                       {member.role === 'admin' ? 'admin' : 'user'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-end">
-                      <button onClick={() => handleRoleToggle(member)} disabled={isProcessing}
-                        className="text-xs text-amber-400 hover:text-amber-300 border border-amber-800/40 px-2 py-1 rounded disabled:opacity-40">
+                      <button
+                        onClick={() => handleRoleToggle(member)} disabled={isProcessing}
+                        className="btn-ghost-sm px-2 py-1 rounded"
+                      >
                         {isProcessing ? '...' : member.role === 'admin' ? 'user로 변경' : 'admin으로 변경'}
                       </button>
-                      <button onClick={() => handleDelete(member)} disabled={isProcessing}
-                        className="text-xs text-slate-400 hover:text-red-400 border border-slate-600/40 px-2 py-1 rounded disabled:opacity-40">
+                      <button
+                        onClick={() => handleDelete(member)} disabled={isProcessing}
+                        className="btn-danger text-xs px-2 py-1 rounded"
+                      >
                         강제 탈퇴
                       </button>
                     </div>

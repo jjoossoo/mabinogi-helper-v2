@@ -17,78 +17,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* 헤더 장식 */}
         <div className="text-center mb-8">
-          <div className="text-amber-400 text-5xl mb-2">⚔️</div>
-          <h1 className="text-3xl font-bold text-amber-400 tracking-wider" style={{ fontFamily: 'serif' }}>
+          <div className="text-5xl mb-3">⚔</div>
+          <h1 className="text-3xl font-bold tracking-wider font-serif" style={{ color: 'var(--gold)' }}>
             마비노기 헬퍼
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">에린의 모험을 함께</p>
+          <p className="mt-1.5 text-sm" style={{ color: 'var(--parchment)', opacity: 0.45 }}>에린의 모험을 함께</p>
         </div>
 
-        {/* 카드 */}
-        <div className="bg-slate-800 border border-amber-900/50 rounded-lg p-8 shadow-2xl">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="h-px flex-1 bg-amber-900/50" />
-            <h2 className="text-amber-300 font-semibold text-lg tracking-wide">로그인</h2>
-            <div className="h-px flex-1 bg-amber-900/50" />
+        <div className="panel dots-bg rounded-xl p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px flex-1" style={{ background: 'var(--gold)', opacity: 0.4 }} />
+            <h2 className="font-semibold text-lg tracking-wide font-serif" style={{ color: 'var(--gold-dark)' }}>
+              로그인
+            </h2>
+            <div className="h-px flex-1" style={{ background: 'var(--gold)', opacity: 0.4 }} />
           </div>
 
           {state?.error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded text-red-400 text-sm">
+            <div className="mb-4 p-3 rounded text-sm" style={{
+              background: 'rgba(139,32,32,0.1)',
+              border: '1px solid var(--crimson)',
+              color: 'var(--crimson-light)',
+            }}>
               {state.error}
             </div>
           )}
 
           <form action={formAction} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-slate-300 text-sm mb-1.5">
+              <label htmlFor="email" className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>
                 이메일
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                required
+                id="email" name="email" type="email" required
                 placeholder="example@email.com"
-                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2.5 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                className="input-field w-full rounded px-3 py-2.5 text-sm"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-slate-300 text-sm mb-1.5">
+              <label htmlFor="password" className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>
                 비밀번호
               </label>
               <input
-                id="password"
-                name="password"
-                type="password"
-                required
+                id="password" name="password" type="password" required
                 placeholder="••••••••"
-                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2.5 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                className="input-field w-full rounded px-3 py-2.5 text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={isPending}
-              className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded transition-colors mt-2"
+              className="btn-primary w-full py-2.5 rounded mt-2"
             >
               {isPending ? '로그인 중...' : '로그인'}
             </button>
           </form>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="h-px flex-1 bg-slate-700" />
-            <span className="text-slate-500 text-xs">또는</span>
-            <div className="h-px flex-1 bg-slate-700" />
+            <div className="h-px flex-1" style={{ background: 'var(--gold-dark)', opacity: 0.3 }} />
+            <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.5 }}>또는</span>
+            <div className="h-px flex-1" style={{ background: 'var(--gold-dark)', opacity: 0.3 }} />
           </div>
 
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-medium py-2.5 rounded transition-colors"
+            className="w-full flex items-center justify-center gap-3 rounded py-2.5 font-medium text-sm transition-opacity hover:opacity-80"
+            style={{
+              background: 'var(--parchment-dark)',
+              border: '1px solid var(--gold-dark)',
+              color: 'var(--ink)',
+            }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -99,9 +102,9 @@ export default function LoginPage() {
             Google로 로그인
           </button>
 
-          <p className="text-center text-slate-500 text-sm mt-6">
+          <p className="text-center text-sm mt-6" style={{ color: 'var(--ink)', opacity: 0.6 }}>
             계정이 없으신가요?{' '}
-            <Link href="/signup" className="text-amber-400 hover:text-amber-300 transition-colors">
+            <Link href="/signup" className="font-medium hover:underline" style={{ color: 'var(--gold-dark)' }}>
               회원가입
             </Link>
           </p>

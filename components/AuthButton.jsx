@@ -5,7 +5,6 @@ import Link from 'next/link'
 export default async function AuthButton() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) return null
 
   const { data: profile } = await supabase
@@ -25,11 +24,13 @@ export default async function AuthButton() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-slate-300 text-sm truncate max-w-48">{user.email}</span>
+      <span className="text-sm truncate max-w-48" style={{ color: 'var(--parchment)', opacity: 0.55 }}>
+        {user.email}
+      </span>
       {isAdmin && (
         <Link
           href="/admin"
-          className="text-sm text-slate-400 hover:text-amber-400 border border-slate-700 hover:border-amber-800/60 px-3 py-1 rounded transition-colors"
+          className="btn-ghost-sm px-3 py-1 rounded text-xs"
         >
           🔧 관리자
         </Link>
@@ -37,7 +38,7 @@ export default async function AuthButton() {
       <form action={logoutAction}>
         <button
           type="submit"
-          className="text-sm text-amber-400 hover:text-amber-300 border border-amber-800/60 hover:border-amber-600/60 px-3 py-1 rounded transition-colors"
+          className="btn-danger text-xs px-3 py-1 rounded"
         >
           로그아웃
         </button>

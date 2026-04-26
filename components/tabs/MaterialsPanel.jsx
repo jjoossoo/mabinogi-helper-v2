@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 
-// v1 로직을 Supabase 스키마에 맞게 이식
 function calcMaterials(itemId, amount, itemsMap, recipesMap, craftOwned, craftPlan, baseMaterials, parentId) {
   const item = itemsMap[itemId]
 
@@ -35,11 +34,11 @@ export default function MaterialsPanel() {
   const [recipesMap, setRecipesMap] = useState({})
   const [loading, setLoading] = useState(true)
 
-  const [targets, setTargets] = useState([])  // { itemId, amount, owned }
-  const [craftOwned, setCraftOwned] = useState({}) // 중간 제작 완료 횟수
-  const [baseOwned, setBaseOwned] = useState({})   // 재료 보유량
+  const [targets, setTargets] = useState([])
+  const [craftOwned, setCraftOwned] = useState({})
+  const [baseOwned, setBaseOwned] = useState({})
   const [search, setSearch] = useState('')
-  const [expandedItem, setExpandedItem] = useState(null) // 트리 펼칠 아이템
+  const [expandedItem, setExpandedItem] = useState(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -89,7 +88,11 @@ export default function MaterialsPanel() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full text-slate-600 text-sm">불러오는 중...</div>
+    return (
+      <div className="flex items-center justify-center h-full">
+        <span className="text-sm" style={{ color: 'var(--parchment)', opacity: 0.4 }}>불러오는 중...</span>
+      </div>
+    )
   }
 
   const baseMaterialEntries = Object.entries(result.baseMaterials)
@@ -97,23 +100,29 @@ export default function MaterialsPanel() {
 
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* 아이템 검색 + 목표 목록 */}
+      {/* 아이템 검색 */}
       <div className="flex-shrink-0 space-y-3">
         <div className="relative">
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="아이템 검색 후 추가..."
-            className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500"
+            className="input-dark w-full rounded px-3 py-2 text-sm"
           />
           {searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded shadow-xl z-10 max-h-48 overflow-y-auto">
+            <div
+              className="absolute top-full left-0 right-0 mt-1 rounded shadow-xl z-10 max-h-48 overflow-y-auto"
+              style={{ backgroundColor: 'var(--panel-bg)', border: '1.5px solid var(--gold)' }}
+            >
               {searchResults.map(item => (
                 <button key={item.id} onClick={() => addTarget(item)}
-                  className="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-amber-900/30 flex items-center gap-2">
+                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors hover:bg-[rgba(201,168,76,0.1)]"
+                  style={{ color: 'var(--ink)', borderBottom: '1px solid rgba(138,106,31,0.12)' }}>
                   <span>{item.emoji}</span>
                   <span>{item.name}</span>
-                  {item.craft_output && <span className="text-xs text-slate-500 ml-auto">제작</span>}
+                  {item.craft_output && (
+                    <span className="text-xs ml-auto" style={{ color: 'var(--gold-dark)', opacity: 0.7 }}>제작</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -122,26 +131,28 @@ export default function MaterialsPanel() {
 
         {targets.length > 0 && (
           <div className="space-y-2">
-            <p className="text-slate-500 text-xs">목표 아이템</p>
+            <p className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.45 }}>목표 아이템</p>
             {targets.map((t, idx) => {
               const item = itemsMap[t.itemId]
               return (
-                <div key={t.itemId} className="flex items-center gap-2 bg-slate-800/60 border border-slate-700/40 rounded px-3 py-2">
+                <div key={t.itemId} className="panel dots-bg flex items-center gap-2 rounded-lg px-3 py-2">
                   <span className="text-base">{item?.emoji}</span>
-                  <span className="flex-1 text-sm text-slate-200">{item?.name}</span>
-                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                  <span className="flex-1 text-sm" style={{ color: 'var(--ink)' }}>{item?.name}</span>
+                  <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--ink)', opacity: 0.6 }}>
                     <span>목표</span>
                     <input type="number" value={t.amount} min={1}
                       onChange={e => updateTarget(idx, 'amount', parseInt(e.target.value) || 1)}
                       onFocus={e => e.target.select()}
-                      className="w-14 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-center text-slate-100 focus:outline-none focus:border-amber-500" />
+                      className="input-field w-14 rounded px-2 py-1 text-center text-xs" />
                     <span>보유</span>
                     <input type="number" value={t.owned ?? 0} min={0}
                       onChange={e => updateTarget(idx, 'owned', parseInt(e.target.value) || 0)}
                       onFocus={e => e.target.select()}
-                      className="w-14 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-center text-slate-100 focus:outline-none focus:border-amber-500" />
+                      className="input-field w-14 rounded px-2 py-1 text-center text-xs" />
                   </div>
-                  <button onClick={() => removeTarget(idx)} className="text-slate-500 hover:text-red-400 text-xs ml-1">✕</button>
+                  <button onClick={() => removeTarget(idx)}
+                    className="text-xs ml-1 transition-opacity hover:opacity-70"
+                    style={{ color: 'var(--crimson-light)' }}>✕</button>
                 </div>
               )
             })}
@@ -150,21 +161,22 @@ export default function MaterialsPanel() {
       </div>
 
       {targets.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-600">
+        <div className="flex-1 flex flex-col items-center justify-center">
           <div className="text-4xl mb-2">⚗️</div>
-          <p className="text-sm">위에서 아이템을 검색해 추가하세요</p>
+          <p className="text-sm" style={{ color: 'var(--parchment)', opacity: 0.35 }}>위에서 아이템을 검색해 추가하세요</p>
         </div>
       )}
 
       {targets.length > 0 && (
         <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
-          {/* 필요 재료 (기본 재료) */}
+          {/* 필요 재료 */}
           {baseMaterialEntries.length > 0 && (
             <div>
-              <h3 className="text-amber-400 text-xs font-semibold mb-2 flex items-center gap-2">
-                <div className="h-px flex-1 bg-amber-900/30" />
-                필요 재료
-                <div className="h-px flex-1 bg-amber-900/30" />
+              <h3 className="text-xs font-semibold font-serif mb-2 flex items-center gap-2"
+                style={{ color: 'var(--gold)' }}>
+                <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
+                ✦ 필요 재료
+                <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
               </h3>
               <div className="space-y-1.5">
                 {baseMaterialEntries.map(([id, info]) => {
@@ -175,37 +187,45 @@ export default function MaterialsPanel() {
                   const isExpanded = expandedItem === id
 
                   return (
-                    <div key={id} className={`bg-slate-800/60 border rounded-lg px-3 py-2 ${isDone ? 'border-green-800/40' : 'border-slate-700/40'}`}>
+                    <div key={id}
+                      className="panel dots-bg rounded-lg px-3 py-2"
+                      style={isDone ? { borderColor: 'var(--sage)' } : {}}
+                    >
                       <div className="flex items-center gap-2">
                         <span className="text-base">{item?.emoji ?? '📦'}</span>
-                        <span className={`flex-1 text-sm ${isDone ? 'text-green-400' : 'text-slate-200'}`}>
+                        <span className="flex-1 text-sm" style={{ color: isDone ? 'var(--sage)' : 'var(--ink)' }}>
                           {item?.name ?? id}
                         </span>
-                        <span className={`text-xs font-medium ${isDone ? 'text-green-400' : 'text-amber-400'}`}>
+                        <span className="text-xs font-medium" style={{ color: isDone ? 'var(--sage)' : 'var(--gold-dark)' }}>
                           {info.amount}개 필요
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-500">보유</span>
+                          <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.5 }}>보유</span>
                           <input type="number" value={owned} min={0}
                             onChange={e => setBaseOwned(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
                             onFocus={e => e.target.select()}
-                            className={`w-14 bg-slate-700 border rounded px-2 py-0.5 text-center text-xs focus:outline-none ${
-                              isDone ? 'border-green-700/50 text-green-400' : 'border-slate-600 text-slate-100 focus:border-amber-500'
-                            }`} />
+                            className="input-field w-14 rounded px-2 py-0.5 text-center text-xs"
+                            style={isDone ? { borderColor: 'var(--sage)', color: 'var(--sage)' } : {}} />
                         </div>
                         {usedByItems.length > 0 && (
                           <button onClick={() => setExpandedItem(isExpanded ? null : id)}
-                            className="text-slate-500 hover:text-slate-300 text-xs border border-slate-700 px-1.5 py-0.5 rounded">
+                            className="btn-ghost-sm px-1.5 py-0.5 rounded">
                             {isExpanded ? '▲' : '▼'}
                           </button>
                         )}
                       </div>
                       {isExpanded && usedByItems.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-slate-700/40 flex flex-wrap gap-1.5">
+                        <div
+                          className="mt-2 pt-2 flex flex-wrap gap-1.5"
+                          style={{ borderTop: '1px solid rgba(138,106,31,0.2)' }}
+                        >
                           {usedByItems.map(pid => {
                             const pItem = itemsMap[pid]
                             return (
-                              <span key={pid} className="text-xs text-slate-400 bg-slate-700/40 px-2 py-0.5 rounded">
+                              <span key={pid}
+                                className="text-xs px-2 py-0.5 rounded"
+                                style={{ color: 'var(--ink)', opacity: 0.6, background: 'rgba(138,106,31,0.1)', border: '1px solid rgba(138,106,31,0.2)' }}
+                              >
                                 {pItem?.emoji} {pItem?.name} ×{info.usedBy[pid]}
                               </span>
                             )
@@ -222,10 +242,11 @@ export default function MaterialsPanel() {
           {/* 제작 계획 */}
           {craftPlanEntries.length > 0 && (
             <div>
-              <h3 className="text-slate-400 text-xs font-semibold mb-2 flex items-center gap-2">
-                <div className="h-px flex-1 bg-slate-700/40" />
+              <h3 className="text-xs font-semibold font-serif mb-2 flex items-center gap-2"
+                style={{ color: 'var(--parchment)', opacity: 0.5 }}>
+                <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.15)' }} />
                 제작 계획
-                <div className="h-px flex-1 bg-slate-700/40" />
+                <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.15)' }} />
               </h3>
               <div className="space-y-1.5">
                 {craftPlanEntries.map(([id, info]) => {
@@ -233,16 +254,19 @@ export default function MaterialsPanel() {
                   const owned = craftOwned[id] ?? 0
 
                   return (
-                    <div key={id} className="flex items-center gap-2 bg-slate-800/40 border border-slate-700/30 rounded-lg px-3 py-2">
+                    <div key={id}
+                      className="panel rounded-lg flex items-center gap-2 px-3 py-2"
+                      style={{ opacity: 0.85 }}
+                    >
                       <span>{item?.emoji ?? '⚗️'}</span>
-                      <span className="flex-1 text-sm text-slate-300">{item?.name ?? id}</span>
-                      <span className="text-xs text-slate-400">{info.count}회 제작</span>
+                      <span className="flex-1 text-sm" style={{ color: 'var(--ink)' }}>{item?.name ?? id}</span>
+                      <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.5 }}>{info.count}회 제작</span>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-slate-500">완료</span>
+                        <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>완료</span>
                         <input type="number" value={owned} min={0} max={info.count}
                           onChange={e => setCraftOwned(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
                           onFocus={e => e.target.select()}
-                          className="w-12 bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-center text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
+                          className="input-field w-12 rounded px-2 py-0.5 text-center text-xs" />
                       </div>
                     </div>
                   )

@@ -33,8 +33,6 @@ const QUEST_SELECT = `
   )
 `.trim()
 
-// ── 진행도 계산 헬퍼 ──────────────────────────────────────
-
 function isCondDone(cond, progress) {
   const val = progress[cond.id] ?? 0
   return cond.type === 'check' ? val >= 1 : cond.max_value != null && val >= cond.max_value
@@ -69,18 +67,28 @@ function ConditionRow({ cond, progress, onChange }) {
       {cond.type === 'check' ? (
         <input type="checkbox" checked={val >= 1}
           onChange={e => onChange(cond.id, 'check', e.target.checked)}
-          className="w-4 h-4 accent-amber-500 flex-shrink-0" />
+          className="w-4 h-4 flex-shrink-0"
+          style={{ accentColor: 'var(--sage)' }} />
       ) : (
         <input type="number" value={val} min={0} max={cond.max_value ?? undefined}
           onChange={e => onChange(cond.id, 'progress', e.target.value)}
           onFocus={e => e.target.select()}
-          className="w-16 bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-slate-100 text-xs focus:outline-none focus:border-amber-500 text-center flex-shrink-0" />
+          className="input-field w-16 rounded px-2 py-0.5 text-xs text-center flex-shrink-0" />
       )}
-      <span className={`text-xs flex-1 ${done ? 'text-green-400 line-through' : 'text-slate-300'}`}>
+      <span
+        className="text-xs flex-1"
+        style={{
+          color: done ? 'var(--sage)' : 'var(--ink)',
+          textDecoration: done ? 'line-through' : 'none',
+          opacity: done ? 0.7 : 1,
+        }}
+      >
         {cond.name}
       </span>
       {cond.type === 'progress' && cond.max_value != null && (
-        <span className="text-xs text-slate-500 flex-shrink-0">/ {cond.max_value}</span>
+        <span className="text-xs flex-shrink-0" style={{ color: 'var(--ink)', opacity: 0.45 }}>
+          / {cond.max_value}
+        </span>
       )}
     </div>
   )
@@ -89,9 +97,16 @@ function ConditionRow({ cond, progress, onChange }) {
 function RewardBadges({ rewards }) {
   if (!rewards?.length) return null
   return (
-    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-slate-700/40">
+    <div className="flex flex-wrap gap-1.5 mt-2 pt-2" style={{ borderTop: '1px solid rgba(138,106,31,0.2)' }}>
       {rewards.map(r => (
-        <span key={r.id} className="text-xs text-slate-400 bg-slate-700/40 px-2 py-0.5 rounded">
+        <span key={r.id}
+          className="text-xs px-2 py-0.5 rounded"
+          style={{
+            color: 'var(--gold-dark)',
+            background: 'rgba(201,168,76,0.12)',
+            border: '1px solid rgba(201,168,76,0.35)',
+          }}
+        >
           {r.items?.emoji} {r.items?.name} ×{r.amount}
         </span>
       ))}
@@ -106,7 +121,13 @@ function MissionDisplay({ mission, progress, onChange }) {
   const done = isMissionDone(mission, progress)
 
   return (
-    <div className={`rounded p-2.5 space-y-2 transition-colors ${done ? 'border border-green-800/40 bg-green-900/10' : 'border border-slate-700/20 bg-slate-800/20'}`}>
+    <div
+      className="rounded p-2.5 space-y-2 transition-colors"
+      style={{
+        border: `1px solid ${done ? 'rgba(74,124,95,0.4)' : 'rgba(138,106,31,0.2)'}`,
+        backgroundColor: done ? 'rgba(74,124,95,0.06)' : 'rgba(245,237,214,0.5)',
+      }}
+    >
       {conditions.map(cond => (
         <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChange} />
       ))}
@@ -122,27 +143,34 @@ function SectionDisplay({ section, progress, onChange }) {
   const doneCount = missions.filter(m => isMissionDone(m, progress)).length
 
   return (
-    <div className="border border-slate-700/40 rounded-lg overflow-hidden">
+    <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(138,106,31,0.35)' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 text-left hover:bg-slate-700/40 transition-colors">
-        <span className={`text-xs font-semibold ${done ? 'text-green-400' : 'text-amber-500/80'}`}>
+        className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors hover:bg-[rgba(201,168,76,0.08)]"
+        style={{ backgroundColor: 'var(--parchment-dark)' }}
+      >
+        <span
+          className="text-xs font-semibold font-serif"
+          style={{ color: done ? 'var(--sage)' : 'var(--gold-dark)' }}
+        >
           {done && '✓ '}{section.name}
         </span>
         <div className="flex items-center gap-2">
           {missions.length > 0 && (
-            <span className="text-xs text-slate-500">{doneCount}/{missions.length}</span>
+            <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
+              {doneCount}/{missions.length}
+            </span>
           )}
-          <span className="text-slate-500 text-xs">{open ? '▾' : '▸'}</span>
+          <span className="text-xs" style={{ color: 'var(--gold-dark)' }}>{open ? '▾' : '▸'}</span>
         </div>
       </button>
 
       {open && (
-        <div className="p-2 space-y-2 bg-slate-900/20">
+        <div className="p-2 space-y-2" style={{ backgroundColor: 'rgba(245,237,214,0.6)' }}>
           {missions.map(mission => (
             <MissionDisplay key={mission.id} mission={mission} progress={progress} onChange={onChange} />
           ))}
           {missions.length === 0 && (
-            <p className="text-slate-600 text-xs px-1 py-1">미션이 없습니다</p>
+            <p className="text-xs px-1 py-1" style={{ color: 'var(--ink)', opacity: 0.4 }}>미션이 없습니다</p>
           )}
         </div>
       )}
@@ -162,28 +190,40 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
   const sections = (quest.quest_sections ?? []).sort((a, b) => a.sort_order - b.sort_order)
 
   return (
-    <div className={`border rounded-lg p-3 transition-colors ${done ? 'border-green-800/40 bg-green-900/10' : 'border-amber-900/20 bg-slate-800/60'}`}>
+    <div
+      className="panel dots-bg rounded-lg p-3 transition-colors"
+      style={done ? { borderColor: 'var(--sage)', boxShadow: '0 2px 12px rgba(74,124,95,0.2)' } : {}}
+    >
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`font-medium text-sm ${done ? 'text-green-400' : 'text-slate-200'}`}>
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span
+            className="font-medium text-sm"
+            style={{ color: done ? 'var(--sage)' : 'var(--ink)' }}
+          >
             {done && '✓ '}{quest.name}
           </span>
           {quest.deadline && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
               {formatDeadline(quest.deadline)}
               {isExpired(quest.deadline) && (
-                <span className="ml-1 text-xs px-1 py-0.5 rounded bg-red-900/20 border border-red-800/40 text-red-400">마감</span>
+                <span
+                  className="ml-1 text-xs px-1 py-0.5 rounded"
+                  style={{ background: 'rgba(139,32,32,0.12)', border: '1px solid var(--crimson)', color: 'var(--crimson-light)' }}
+                >마감</span>
               )}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {!isHierarchical && simpleConditions.length > 0 && (
-            <span className="text-xs text-slate-500">{simpleDone}/{simpleConditions.length}</span>
+            <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
+              {simpleDone}/{simpleConditions.length}
+            </span>
           )}
           <button onClick={onRemove} title="목록에서 제거"
-            className="text-slate-600 hover:text-red-400 text-xs transition-colors">✕</button>
+            className="text-xs transition-opacity hover:opacity-70"
+            style={{ color: 'var(--crimson-light)' }}>✕</button>
         </div>
       </div>
 
@@ -208,7 +248,7 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
             <SectionDisplay key={section.id} section={section} progress={progress} onChange={onChangeCondition} />
           ))}
           {sections.length === 0 && (
-            <p className="text-slate-600 text-xs">분류가 없습니다</p>
+            <p className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>분류가 없습니다</p>
           )}
         </div>
       )}
@@ -229,55 +269,64 @@ function QuestPickerModal({ allQuests, selectedIds, onToggle, onClose }) {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-lg bg-slate-800 border border-amber-900/50 rounded-lg shadow-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-amber-900/30">
-          <h3 className="text-amber-300 font-semibold">퀘스트 선택</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="panel dots-bg w-full max-w-lg rounded-xl max-h-[80vh] flex flex-col">
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid rgba(201,168,76,0.35)' }}
+        >
+          <h3 className="font-serif font-semibold" style={{ color: 'var(--gold-dark)' }}>✦ 퀘스트 선택</h3>
+          <button onClick={onClose}
+            className="text-xl leading-none transition-opacity hover:opacity-60"
+            style={{ color: 'var(--ink)' }}>✕</button>
         </div>
 
-        <div className="px-5 py-3 border-b border-amber-900/20 flex flex-col gap-2">
+        <div className="px-5 py-3 flex flex-col gap-2" style={{ borderBottom: '1px solid rgba(138,106,31,0.25)' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="퀘스트 검색..."
-            className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:border-amber-500" />
+            className="input-field w-full rounded px-3 py-1.5 text-sm" />
           <div className="flex gap-1 flex-wrap">
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                  activeCategory === cat
-                    ? 'bg-amber-700 text-white'
-                    : 'text-slate-400 hover:text-slate-200 border border-slate-700'
-                }`}>{cat}</button>
+                className="px-3 py-1 rounded text-xs font-medium transition-colors"
+                style={activeCategory === cat
+                  ? { backgroundColor: 'var(--gold)', color: 'var(--ink)', fontWeight: 600 }
+                  : { color: 'var(--gold-dark)', border: '1px solid var(--gold)', background: 'transparent' }
+                }>{cat}</button>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-700/40">
+        <div className="flex-1 overflow-y-auto">
           {filtered.map(quest => {
             const isSelected = selectedIds.has(quest.id)
             return (
-              <div key={quest.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-700/20">
+              <div
+                key={quest.id}
+                className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-[rgba(201,168,76,0.06)]"
+                style={{ borderBottom: '1px solid rgba(138,106,31,0.12)' }}
+              >
                 <div className="flex-1 min-w-0">
-                  <span className="text-slate-200 text-sm">{quest.name}</span>
+                  <span className="text-sm" style={{ color: 'var(--ink)' }}>{quest.name}</span>
                   {quest.sub_category && (
-                    <span className="ml-2 text-xs text-slate-500">{quest.sub_category}</span>
+                    <span className="ml-2 text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
+                      {quest.sub_category}
+                    </span>
                   )}
                   {quest.structure_type === 'hierarchical' && (
-                    <span className="ml-2 text-xs text-slate-600">계층형</span>
+                    <span className="ml-2 text-xs" style={{ color: 'var(--ink)', opacity: 0.35 }}>계층형</span>
                   )}
                 </div>
                 <button onClick={() => onToggle(quest.id, isSelected)}
-                  className={`ml-3 text-xs px-3 py-1 rounded border transition-colors flex-shrink-0 ${
-                    isSelected
-                      ? 'text-red-400 border-red-800/40 hover:bg-red-900/20'
-                      : 'text-amber-400 border-amber-800/40 hover:bg-amber-900/20'
-                  }`}>
+                  className={`ml-3 text-xs px-3 py-1 rounded flex-shrink-0 transition-colors ${isSelected ? 'btn-danger' : 'btn-primary'}`}>
                   {isSelected ? '제거' : '추가'}
                 </button>
               </div>
             )
           })}
           {filtered.length === 0 && (
-            <div className="px-5 py-8 text-center text-slate-600 text-sm">퀘스트가 없습니다</div>
+            <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--ink)', opacity: 0.4 }}>
+              퀘스트가 없습니다
+            </div>
           )}
         </div>
       </div>
@@ -360,8 +409,8 @@ export default function QuestsPanel({ characterId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-600">
-        <span className="text-sm">불러오는 중...</span>
+      <div className="flex items-center justify-center h-full">
+        <span className="text-sm" style={{ color: 'var(--parchment)', opacity: 0.4 }}>불러오는 중...</span>
       </div>
     )
   }
@@ -373,34 +422,35 @@ export default function QuestsPanel({ characterId }) {
         <div className="flex gap-1 flex-wrap">
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                effectiveCategory === cat
-                  ? 'bg-amber-700/60 text-amber-300 border border-amber-600/40'
-                  : 'text-slate-400 hover:text-slate-200 border border-slate-700'
-              }`}>
+              className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+              style={effectiveCategory === cat
+                ? { backgroundColor: 'var(--parchment)', color: 'var(--ink)', fontWeight: 600, border: '1.5px solid var(--gold)' }
+                : { color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.5)', background: 'rgba(201,168,76,0.06)' }
+              }>
               {cat} ({selectedQuests.filter(q => q.category === cat).length})
             </button>
           ))}
         </div>
         <button onClick={() => setShowPicker(true)}
-          className="text-xs bg-amber-700 hover:bg-amber-600 text-white px-3 py-1.5 rounded transition-colors flex-shrink-0 ml-2">
+          className="btn-primary text-xs px-3 py-1.5 rounded flex-shrink-0 ml-2">
           + 퀘스트 선택
         </button>
       </div>
 
       {toggleError && (
-        <p className="text-red-400 text-xs bg-red-900/20 border border-red-800/40 rounded px-3 py-2 mb-2 flex-shrink-0">
+        <p className="text-xs rounded px-3 py-2 mb-2 flex-shrink-0"
+          style={{ background: 'rgba(139,32,32,0.1)', border: '1px solid var(--crimson)', color: 'var(--crimson-light)' }}>
           오류: {toggleError}
         </p>
       )}
 
       {/* 퀘스트 목록 */}
       {selectedQuests.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-600">
+        <div className="flex-1 flex flex-col items-center justify-center">
           <div className="text-4xl mb-2">📜</div>
-          <p className="text-sm">진행할 퀘스트를 선택하세요</p>
+          <p className="text-sm" style={{ color: 'var(--parchment)', opacity: 0.35 }}>진행할 퀘스트를 선택하세요</p>
           <button onClick={() => setShowPicker(true)}
-            className="mt-3 text-xs text-amber-500 hover:text-amber-400 border border-amber-800/40 px-3 py-1.5 rounded">
+            className="btn-ghost mt-3 text-xs px-3 py-1.5 rounded">
             퀘스트 선택하기
           </button>
         </div>
@@ -409,10 +459,11 @@ export default function QuestsPanel({ characterId }) {
           {Object.entries(grouped).map(([subCat, questList]) => (
             <div key={subCat}>
               {subCat !== '기타' && (
-                <h4 className="text-amber-600 text-xs font-semibold mb-2 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-amber-900/30" />
-                  {subCat}
-                  <div className="h-px flex-1 bg-amber-900/30" />
+                <h4 className="text-xs font-semibold font-serif mb-2 flex items-center gap-2"
+                  style={{ color: 'var(--gold)' }}>
+                  <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
+                  ✦ {subCat}
+                  <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
                 </h4>
               )}
               <div className="space-y-2">

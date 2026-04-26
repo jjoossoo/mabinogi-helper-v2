@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--noto-serif, 'Noto Serif KR', serif);
+  --font-sans: var(--noto-sans, 'Noto Sans KR', sans-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --gold-dark: #8a6a1f;
+  --parchment: #f5edd6;
+  --parchment-dark: #e8d8b0;
+  --deep: #1a1208;
+  --ink: #2d1f0a;
+  --sage: #4a7c5f;
+  --sage-light: #6aad84;
+  --crimson: #8b2020;
+  --crimson-light: #c0392b;
+  --panel-bg: rgba(245, 237, 214, 0.96);
+  --border: #c9a84c;
+  --shadow: rgba(26, 18, 8, 0.5);
+}
+
+html {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  background-color: #0d0a05;
+  background-image:
+    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(201, 168, 76, 0.16) 0%, transparent 65%),
+    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='%23c9a84c' fill-opacity='0.07'/%3E%3Ccircle cx='0' cy='0' r='1' fill='%23c9a84c' fill-opacity='0.07'/%3E%3Ccircle cx='40' cy='0' r='1' fill='%23c9a84c' fill-opacity='0.07'/%3E%3Ccircle cx='0' cy='40' r='1' fill='%23c9a84c' fill-opacity='0.07'/%3E%3Ccircle cx='40' cy='40' r='1' fill='%23c9a84c' fill-opacity='0.07'/%3E%3C/svg%3E");
+  color: var(--parchment);
+  font-family: var(--font-sans);
 }
+
+/* ── Dot pattern for panels ── */
+.dots-bg {
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='8' cy='8' r='0.6' fill='%238a6a1f' fill-opacity='0.18'/%3E%3C/svg%3E");
+}
+
+/* ── Panel ── */
+.panel {
+  background-color: var(--panel-bg);
+  border: 1.5px solid var(--gold);
+  box-shadow: 0 4px 24px var(--shadow);
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  background-color: var(--sage);
+  color: var(--parchment);
+  border: 1.5px solid var(--sage-light);
+  font-weight: 500;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger {
+  background-color: var(--crimson);
+  color: var(--parchment);
+  border: 1.5px solid var(--crimson-light);
+  font-weight: 500;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.btn-danger:hover:not(:disabled) { opacity: 0.85; }
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gold-dark);
+  border: 1.5px solid var(--gold);
+  font-weight: 500;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.btn-ghost:hover:not(:disabled) { background: rgba(201, 168, 76, 0.12); }
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost-sm {
+  background: transparent;
+  color: var(--gold-dark);
+  border: 1px solid var(--gold);
+  font-size: 0.7rem;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.btn-ghost-sm:hover { background: rgba(201, 168, 76, 0.1); }
+
+/* ── Input ── */
+.input-field {
+  background-color: var(--parchment-dark);
+  border: 1px solid var(--gold-dark);
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+.input-field:focus { outline: none; border-color: var(--gold); }
+.input-field::placeholder { color: rgba(45, 31, 10, 0.36); }
+.input-field:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Input on dark background ── */
+.input-dark {
+  background-color: rgba(245, 237, 214, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.4);
+  color: var(--parchment);
+  transition: border-color 0.15s;
+}
+.input-dark:focus { outline: none; border-color: var(--gold); }
+.input-dark::placeholder { color: rgba(245, 237, 214, 0.28); }
+
+/* ── Tabs ── */
+.tab-active {
+  background-color: var(--parchment);
+  color: var(--ink);
+  border-bottom: 2.5px solid var(--gold);
+  font-weight: 600;
+}
+.tab-inactive {
+  color: var(--gold);
+  opacity: 0.6;
+  border-bottom: 2.5px solid transparent;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+.tab-inactive:hover { opacity: 1; }

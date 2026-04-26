@@ -21,21 +21,31 @@ export default function AdminView({ initialCategories, initialItems, initialQues
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* 관리자 헤더 */}
-      <div className="bg-slate-800 border-b border-amber-900/30 px-6 py-3 flex items-center gap-3">
-        <span className="text-amber-400 text-sm font-semibold">🔧 관리자 패널</span>
+      <div
+        className="px-6 py-3 flex items-center gap-3 flex-shrink-0"
+        style={{
+          backgroundColor: 'var(--deep)',
+          borderBottom: '1px solid rgba(201,168,76,0.3)',
+        }}
+      >
+        <span className="font-serif font-semibold text-sm tracking-wide" style={{ color: 'var(--gold)' }}>
+          🔧 관리자 패널
+        </span>
       </div>
 
       {/* 탭 바 */}
-      <div className="flex border-b border-amber-900/20 bg-slate-800/30 px-4">
+      <div
+        className="flex px-4 flex-shrink-0"
+        style={{
+          backgroundColor: 'rgba(26,18,8,0.7)',
+          borderBottom: '2px solid rgba(201,168,76,0.3)',
+        }}
+      >
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === tab.id
-                ? 'text-amber-400 border-amber-500'
-                : 'text-slate-400 border-transparent hover:text-slate-200'
-            }`}
+            className={`px-5 py-3 text-sm transition-colors ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'}`}
           >
             {tab.label}
           </button>
