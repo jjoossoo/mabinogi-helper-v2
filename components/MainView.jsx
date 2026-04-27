@@ -27,6 +27,11 @@ export default function MainView({ initialCharacters }) {
   const [showModal, setShowModal] = useState(false)
   const [, startTransition] = useTransition()
 
+  // 재료 계산기 state — 탭/캐릭터 전환 시에도 유지
+  const [materialsTargets, setMaterialsTargets] = useState([])
+  const [materialsCraftOwned, setMaterialsCraftOwned] = useState({})
+  const [materialsBaseOwned, setMaterialsBaseOwned] = useState({})
+
   const selectedChar = characters.find(c => c.id === selectedId)
 
   function handleAddSuccess(character) {
@@ -256,13 +261,20 @@ export default function MainView({ initialCharacters }) {
                 <p className="text-sm text-center px-4">위에서 캐릭터를 선택하거나 추가하세요</p>
               </div>
             ) : activeTab === 'quests' ? (
-              <QuestsPanel characterId={selectedChar.id} />
+              <QuestsPanel character={selectedChar} />
             ) : activeTab === 'contents' ? (
               <ContentsPanel characterId={selectedChar.id} />
             ) : activeTab === 'trades' ? (
               <TradesPanel character={selectedChar} />
             ) : (
-              <MaterialsPanel />
+              <MaterialsPanel
+              targets={materialsTargets}
+              setTargets={setMaterialsTargets}
+              craftOwned={materialsCraftOwned}
+              setCraftOwned={setMaterialsCraftOwned}
+              baseOwned={materialsBaseOwned}
+              setBaseOwned={setMaterialsBaseOwned}
+            />
             )}
           </div>
         </div>

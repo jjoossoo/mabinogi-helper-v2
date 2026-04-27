@@ -164,11 +164,11 @@ async function insertQuestSections(db, questId, sections) {
 export async function addQuest(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, category, sub_category, description, deadline, structure_type, conditions, rewards, sections } = data
+  const { name, category, sub_category, description, deadline, structure_type, reset_type, reset_day, reset_hour, scope, conditions, rewards, sections } = data
 
   const { data: quest, error } = await db
     .from('quests')
-    .insert({ name, category, sub_category: sub_category || '', description, deadline: deadline || null, structure_type: structure_type || 'simple' })
+    .insert({ name, category, sub_category: sub_category || '', description, deadline: deadline || null, structure_type: structure_type || 'simple', reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6, scope: scope ?? 'character' })
     .select().single()
   if (error) return { error: error.message }
 
@@ -190,11 +190,11 @@ export async function addQuest(data) {
 export async function updateQuest(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, category, sub_category, description, deadline, structure_type, conditions, rewards, sections } = data
+  const { name, category, sub_category, description, deadline, structure_type, reset_type, reset_day, reset_hour, scope, conditions, rewards, sections } = data
 
   const { error } = await db
     .from('quests')
-    .update({ name, category, sub_category: sub_category || '', description, deadline: deadline || null, structure_type: structure_type || 'simple' })
+    .update({ name, category, sub_category: sub_category || '', description, deadline: deadline || null, structure_type: structure_type || 'simple', reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6, scope: scope ?? 'character' })
     .eq('id', id)
   if (error) return { error: error.message }
 

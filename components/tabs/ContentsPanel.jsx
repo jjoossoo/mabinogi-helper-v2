@@ -3,52 +3,36 @@
 import { useState, useEffect, useTransition } from 'react'
 import { createClient } from '@/lib/supabase'
 import { addCharacterContent, removeCharacterContent, upsertContentProgress } from '@/app/actions/contents'
+import { isCompleted } from '@/lib/resetUtils'
 
-const CYCLE_LABELS = { daily: '일일', weekly: '주간' }
+const RESET_LABELS = { none: '없음', daily: '일일', weekly: '주간' }
 
-function getKSTDayStart() {
-  const now = new Date()
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  kst.setUTCHours(0, 0, 0, 0)
-  return new Date(kst.getTime() - 9 * 60 * 60 * 1000)
+function makeRi(content) {
+  return { type: content.reset_type, day: content.reset_day, hour: content.reset_hour }
 }
 
-function getKSTWeekStart() {
-  const dayStart = getKSTDayStart()
-  const kst = new Date(dayStart.getTime() + 9 * 60 * 60 * 1000)
-  const day = kst.getUTCDay()
-  kst.setUTCDate(kst.getUTCDate() - day)
-  return new Date(kst.getTime() - 9 * 60 * 60 * 1000)
-}
-
-function isProgressExpired(updatedAt, resetCycle) {
-  if (!updatedAt) return true
-  const resetTime = resetCycle === 'weekly' ? getKSTWeekStart() : getKSTDayStart()
-  return new Date(updatedAt) < resetTime
-}
-
-function getEffectiveValue(condId, progress, resetCycle) {
-  const p = progress[condId]
-  if (!p) return 0
-  if (isProgressExpired(p.updated_at, resetCycle)) return 0
-  return p.value ?? 0
-}
-
-function isCondDone(cond, progress, resetCycle) {
-  const val = getEffectiveValue(cond.id, progress, resetCycle)
-  return cond.type === 'check' ? val >= 1 : cond.max_value != null && val >= cond.max_value
+function isCondDone(cond, progress, ri) {
+  const p = progress[cond.id]
+  if (!p) return false
+  if (!ri?.type || ri.type === 'none') {
+    const val = p.value ?? 0
+    return cond.type === 'check' ? val >= 1 : (cond.max_value != null && val >= cond.max_value)
+  }
+  return isCompleted(p.completed_at, ri.type, ri.day, ri.hour)
 }
 
 function isContentDone(content, progress) {
+  const ri = makeRi(content)
   const conds = content.content_conditions ?? []
-  return conds.length > 0 && conds.every(c => isCondDone(c, progress, content.reset_cycle))
+  return conds.length > 0 && conds.every(c => isCondDone(c, progress, ri))
 }
 
 // ── 조건 행 ─────────────────────────────────────────────────
 
-function ConditionRow({ cond, resetCycle, progress, onChange }) {
-  const val = getEffectiveValue(cond.id, progress, resetCycle)
-  const done = isCondDone(cond, progress, resetCycle)
+function ConditionRow({ cond, ri, progress, onChange }) {
+  const p = progress[cond.id]
+  const val = p?.value ?? 0
+  const done = isCondDone(cond, progress, ri)
   const nameStyle = {
     color: done ? 'var(--sage)' : 'var(--ink)',
     textDecoration: done ? 'line-through' : 'none',
@@ -58,8 +42,8 @@ function ConditionRow({ cond, resetCycle, progress, onChange }) {
   if (cond.type === 'check') {
     return (
       <div className="flex items-center gap-3">
-        <input type="checkbox" checked={val >= 1}
-          onChange={e => onChange(cond.id, 'check', e.target.checked)}
+        <input type="checkbox" checked={done}
+          onChange={e => onChange(cond.id, 'check', e.target.checked, null)}
           className="w-4 h-4 flex-shrink-0"
           style={{ accentColor: 'var(--sage)' }} />
         <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
@@ -69,9 +53,15 @@ function ConditionRow({ cond, resetCycle, progress, onChange }) {
 
   return (
     <div className="flex items-center gap-2">
+      {cond.max_value != null && (
+        <input type="checkbox" checked={done}
+          onChange={e => onChange(cond.id, 'progress', e.target.checked ? cond.max_value : 0, cond.max_value)}
+          className="w-4 h-4 flex-shrink-0"
+          style={{ accentColor: 'var(--sage)' }} />
+      )}
       <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
       <input type="number" value={val} min={0} max={cond.max_value ?? undefined}
-        onChange={e => onChange(cond.id, 'progress', e.target.value)}
+        onChange={e => onChange(cond.id, 'progress', e.target.value, cond.max_value)}
         onFocus={e => e.target.select()}
         className="input-field w-16 rounded px-2 py-0.5 text-xs text-center flex-shrink-0" />
       {cond.max_value != null && (
@@ -86,10 +76,11 @@ function ConditionRow({ cond, resetCycle, progress, onChange }) {
 // ── 콘텐츠 카드 ──────────────────────────────────────────────
 
 function ContentCard({ content, progress, onChangeCondition, onRemove }) {
+  const ri = makeRi(content)
   const done = isContentDone(content, progress)
   const conds = [...(content.content_conditions ?? [])].sort((a, b) => a.sort_order - b.sort_order)
   const rewards = content.content_rewards ?? []
-  const doneCount = conds.filter(c => isCondDone(c, progress, content.reset_cycle)).length
+  const doneCount = conds.filter(c => isCondDone(c, progress, ri)).length
   const [open, setOpen] = useState(!done)
 
   useEffect(() => {
@@ -132,7 +123,7 @@ function ContentCard({ content, progress, onChangeCondition, onRemove }) {
                 <ConditionRow
                   key={cond.id}
                   cond={cond}
-                  resetCycle={content.reset_cycle}
+                  ri={ri}
                   progress={progress}
                   onChange={onChangeCondition}
                 />
@@ -162,7 +153,7 @@ function ContentPickerModal({ allContents, selectedIds, onToggle, onClose, activ
   const [search, setSearch] = useState('')
 
   const filtered = allContents.filter(c =>
-    c.reset_cycle === cycle &&
+    c.reset_type === cycle &&
     (!search.trim() || c.name.includes(search.trim()))
   )
 
@@ -186,7 +177,7 @@ function ContentPickerModal({ allContents, selectedIds, onToggle, onClose, activ
                 style={cycle === c
                   ? { backgroundColor: 'var(--gold)', color: 'var(--ink)', fontWeight: 600 }
                   : { color: 'var(--gold-dark)', border: '1px solid var(--gold)', background: 'transparent' }
-                }>{CYCLE_LABELS[c]}</button>
+                }>{RESET_LABELS[c]}</button>
             ))}
           </div>
         </div>
@@ -243,13 +234,13 @@ export default function ContentsPanel({ characterId }) {
           .select('*, content_conditions(id, name, type, max_value, sort_order), content_rewards(id, item_id, amount, items(name, emoji))')
           .order('sort_order').order('name'),
         supabase.from('character_contents').select('content_id').eq('character_id', characterId),
-        supabase.from('content_progress').select('condition_id, value, updated_at').eq('character_id', characterId),
+        supabase.from('content_progress').select('condition_id, value, completed_at').eq('character_id', characterId),
       ])
       setAllContents(contentData ?? [])
       setSelectedIds(new Set((selectedData ?? []).map(r => r.content_id)))
       if (progressErr) setError('진행상황 로드 실패: ' + progressErr.message)
       setProgress(Object.fromEntries(
-        (progressData ?? []).map(p => [p.condition_id, { value: p.value, updated_at: p.updated_at }])
+        (progressData ?? []).map(p => [p.condition_id, { value: p.value ?? 0, completed_at: p.completed_at ?? null }])
       ))
       setLoading(false)
     }
@@ -279,13 +270,14 @@ export default function ContentsPanel({ characterId }) {
     }
   }
 
-  function handleChangeCondition(conditionId, type, rawValue) {
+  function handleChangeCondition(conditionId, type, rawValue, maxValue) {
     const value = type === 'check' ? (rawValue ? 1 : 0) : (parseInt(rawValue) || 0)
-    const now = new Date().toISOString()
+    const isDone = type === 'check' ? value >= 1 : (maxValue != null && value >= maxValue)
+    const completedAt = isDone ? new Date().toISOString() : null
     const oldEntry = progress[conditionId]
-    setProgress(prev => ({ ...prev, [conditionId]: { value, updated_at: now } }))
+    setProgress(prev => ({ ...prev, [conditionId]: { value, completed_at: completedAt } }))
     startTransition(async () => {
-      const result = await upsertContentProgress(characterId, conditionId, value)
+      const result = await upsertContentProgress(characterId, conditionId, value, completedAt)
       if (result?.error) {
         setProgress(prev => ({ ...prev, [conditionId]: oldEntry }))
         setError('저장 실패: ' + result.error)
@@ -293,7 +285,7 @@ export default function ContentsPanel({ characterId }) {
     })
   }
 
-  const selectedContents = allContents.filter(c => selectedIds.has(c.id) && c.reset_cycle === activeCycle)
+  const selectedContents = allContents.filter(c => selectedIds.has(c.id) && c.reset_type === activeCycle)
 
   if (loading) {
     return (
@@ -305,11 +297,10 @@ export default function ContentsPanel({ characterId }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 flex-shrink-0">
         <div className="flex gap-1 flex-1">
           {['daily', 'weekly'].map(c => {
-            const count = allContents.filter(ct => selectedIds.has(ct.id) && ct.reset_cycle === c).length
+            const count = allContents.filter(ct => selectedIds.has(ct.id) && ct.reset_type === c).length
             return (
               <button key={c} onClick={() => setActiveCycle(c)}
                 className="px-3 rounded text-xs font-medium transition-colors"
@@ -319,7 +310,7 @@ export default function ContentsPanel({ characterId }) {
                     ? { backgroundColor: 'var(--parchment)', color: 'var(--ink)', fontWeight: 600, border: '1.5px solid var(--gold)' }
                     : { color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.5)', background: 'rgba(201,168,76,0.06)' })
                 }}>
-                {CYCLE_LABELS[c]} ({count})
+                {RESET_LABELS[c]} ({count})
               </button>
             )
           })}
@@ -338,12 +329,11 @@ export default function ContentsPanel({ characterId }) {
         </p>
       )}
 
-      {/* 콘텐츠 목록 */}
       {selectedContents.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="text-4xl mb-2">🗺</div>
           <p className="text-sm" style={{ color: 'var(--parchment)', opacity: 0.35 }}>
-            진행할 {CYCLE_LABELS[activeCycle]} 콘텐츠를 선택하세요
+            진행할 {RESET_LABELS[activeCycle]} 콘텐츠를 선택하세요
           </p>
           <button onClick={() => setShowPicker(true)}
             className="btn-ghost mt-3 text-xs px-3 py-1.5 rounded">

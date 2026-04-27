@@ -2,9 +2,10 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { addTrade, updateTrade, deleteTrade } from '@/app/actions/trades'
+import ResetFields from './ResetFields'
 
 const SCOPE_LABELS = { character: '캐릭터', server: '서버' }
-const CYCLE_LABELS = { daily: '일일', weekly: '주간' }
+const RESET_LABELS = { none: '없음', daily: '일일', weekly: '주간' }
 
 // 자유 입력 + 기존 값 제안 (NPC명, 위치)
 function AutocompleteInput({ value, onChange, onSelect, suggestions, placeholder, className = '' }) {
@@ -112,7 +113,9 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
     receive_item_id: trade?.receive_item?.id ?? '',
     receive_amount: trade?.receive_amount ?? 1,
     scope: trade?.scope ?? 'character',
-    reset_cycle: trade?.reset_cycle ?? 'daily',
+    reset_type: trade?.reset_type ?? 'none',
+    reset_day: trade?.reset_day ?? null,
+    reset_hour: trade?.reset_hour ?? 6,
   })
   const [error, setError] = useState(null)
   const [isPending, startTransition] = useTransition()
@@ -148,6 +151,8 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
         ...form,
         give_amount: Number(form.give_amount) || 1,
         receive_amount: Number(form.receive_amount) || 1,
+        reset_day: form.reset_day ?? null,
+        reset_hour: form.reset_hour ?? 6,
       }
       const result = trade ? await updateTrade(trade.id, payload) : await addTrade(payload)
       if (result.error) return setError(result.error)
@@ -250,17 +255,13 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--ink)' }}>초기화 주기</label>
-            <div className="flex gap-4">
-              {['daily', 'weekly'].map(c => (
-                <label key={c} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="reset_cycle" value={c}
-                    checked={form.reset_cycle === c} onChange={() => set('reset_cycle', c)}
-                    style={{ accentColor: 'var(--sage)' }} />
-                  <span className="text-sm" style={{ color: 'var(--ink)' }}>{CYCLE_LABELS[c]}</span>
-                </label>
-              ))}
-            </div>
+            <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--ink)' }}>초기화 설정</label>
+            <ResetFields
+              resetType={form.reset_type}
+              resetDay={form.reset_day}
+              resetHour={form.reset_hour}
+              onChange={(k, v) => set(k, v)}
+            />
           </div>
 
           <div className="flex gap-3 pt-2 pb-1">
@@ -356,7 +357,7 @@ export default function TradesTab({ trades, setTrades, items }) {
                             </span>
                             <span className="text-xs px-1.5 py-0.5 rounded"
                               style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
-                              {CYCLE_LABELS[trade.reset_cycle]}
+                              {RESET_LABELS[trade.reset_type] ?? '없음'}
                             </span>
                           </div>
                         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase'
 import { upsertProgress, addCharacterQuest, removeCharacterQuest } from '@/app/actions/quests'
+import { isCompleted } from '@/lib/resetUtils'
 
 const CATEGORY_ORDER = ['퀘스트', '아르바이트', '이벤트', '미션']
 
@@ -33,35 +34,48 @@ const QUEST_SELECT = `
   )
 `.trim()
 
-function isCondDone(cond, progress) {
-  const val = progress[cond.id] ?? 0
-  return cond.type === 'check' ? val >= 1 : cond.max_value != null && val >= cond.max_value
+// ri = { type, day, hour } 로 초기화 정보 전달
+function makeRi(quest) {
+  return { type: quest.reset_type, day: quest.reset_day, hour: quest.reset_hour }
 }
 
-function isMissionDone(mission, progress) {
+// progress[condId] = { value, completed_at }
+function isCondDone(cond, progress, ri) {
+  const p = progress[cond.id]
+  if (!p) return false
+  if (!ri?.type || ri.type === 'none') {
+    const val = p.value ?? 0
+    return cond.type === 'check' ? val >= 1 : (cond.max_value != null && val >= cond.max_value)
+  }
+  return isCompleted(p.completed_at, ri.type, ri.day, ri.hour)
+}
+
+function isMissionDone(mission, progress, ri) {
   const conds = mission.quest_mission_conditions ?? []
-  return conds.length > 0 && conds.every(c => isCondDone(c, progress))
+  return conds.length > 0 && conds.every(c => isCondDone(c, progress, ri))
 }
 
-function isSectionDone(section, progress) {
+function isSectionDone(section, progress, ri) {
   const missions = section.quest_section_missions ?? []
-  return missions.length > 0 && missions.every(m => isMissionDone(m, progress))
+  return missions.length > 0 && missions.every(m => isMissionDone(m, progress, ri))
 }
 
 function isQuestDone(quest, progress) {
+  const ri = makeRi(quest)
   if (quest.structure_type === 'hierarchical') {
     const sections = quest.quest_sections ?? []
-    return sections.length > 0 && sections.every(s => isSectionDone(s, progress))
+    return sections.length > 0 && sections.every(s => isSectionDone(s, progress, ri))
   }
   const conds = quest.quest_conditions ?? []
-  return conds.length > 0 && conds.every(c => isCondDone(c, progress))
+  return conds.length > 0 && conds.every(c => isCondDone(c, progress, ri))
 }
 
 // ── 조건 단일 행 ──────────────────────────────────────────
 
-function ConditionRow({ cond, progress, onChange }) {
-  const val = progress[cond.id] ?? 0
-  const done = isCondDone(cond, progress)
+function ConditionRow({ cond, progress, onChange, ri }) {
+  const p = progress[cond.id]
+  const val = p?.value ?? 0
+  const done = isCondDone(cond, progress, ri)
   const nameStyle = {
     color: done ? 'var(--sage)' : 'var(--ink)',
     textDecoration: done ? 'line-through' : 'none',
@@ -71,8 +85,8 @@ function ConditionRow({ cond, progress, onChange }) {
   if (cond.type === 'check') {
     return (
       <div className="flex items-center gap-3">
-        <input type="checkbox" checked={val >= 1}
-          onChange={e => onChange(cond.id, 'check', e.target.checked)}
+        <input type="checkbox" checked={done}
+          onChange={e => onChange(cond.id, 'check', e.target.checked, null)}
           className="w-4 h-4 flex-shrink-0"
           style={{ accentColor: 'var(--sage)' }} />
         <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
@@ -82,9 +96,15 @@ function ConditionRow({ cond, progress, onChange }) {
 
   return (
     <div className="flex items-center gap-2">
+      {cond.max_value != null && (
+        <input type="checkbox" checked={done}
+          onChange={e => onChange(cond.id, 'progress', e.target.checked ? cond.max_value : 0, cond.max_value)}
+          className="w-4 h-4 flex-shrink-0"
+          style={{ accentColor: 'var(--sage)' }} />
+      )}
       <span className="text-xs flex-1" style={nameStyle}>{cond.name}</span>
       <input type="number" value={val} min={0} max={cond.max_value ?? undefined}
-        onChange={e => onChange(cond.id, 'progress', e.target.value)}
+        onChange={e => onChange(cond.id, 'progress', e.target.value, cond.max_value)}
         onFocus={e => e.target.select()}
         className="input-field w-16 rounded px-2 py-0.5 text-xs text-center flex-shrink-0" />
       {cond.max_value != null && (
@@ -118,9 +138,9 @@ function RewardBadges({ rewards }) {
 
 // ── 계층형 서브컴포넌트 ───────────────────────────────────
 
-function MissionDisplay({ mission, progress, onChange }) {
+function MissionDisplay({ mission, progress, onChange, ri }) {
   const conditions = (mission.quest_mission_conditions ?? []).sort((a, b) => a.sort_order - b.sort_order)
-  const done = isMissionDone(mission, progress)
+  const done = isMissionDone(mission, progress, ri)
 
   return (
     <div
@@ -131,17 +151,17 @@ function MissionDisplay({ mission, progress, onChange }) {
       }}
     >
       {conditions.map(cond => (
-        <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChange} />
+        <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChange} ri={ri} />
       ))}
       <RewardBadges rewards={mission.quest_mission_rewards} />
     </div>
   )
 }
 
-function SectionDisplay({ section, progress, onChange }) {
+function SectionDisplay({ section, progress, onChange, ri }) {
   const missions = (section.quest_section_missions ?? []).sort((a, b) => a.sort_order - b.sort_order)
-  const done = isSectionDone(section, progress)
-  const doneCount = missions.filter(m => isMissionDone(m, progress)).length
+  const done = isSectionDone(section, progress, ri)
+  const doneCount = missions.filter(m => isMissionDone(m, progress, ri)).length
   const [open, setOpen] = useState(!done)
 
   useEffect(() => {
@@ -173,7 +193,7 @@ function SectionDisplay({ section, progress, onChange }) {
       {open && (
         <div className="p-2 space-y-2" style={{ backgroundColor: 'rgba(245,237,214,0.6)' }}>
           {missions.map(mission => (
-            <MissionDisplay key={mission.id} mission={mission} progress={progress} onChange={onChange} />
+            <MissionDisplay key={mission.id} mission={mission} progress={progress} onChange={onChange} ri={ri} />
           ))}
           {missions.length === 0 && (
             <p className="text-xs px-1 py-1" style={{ color: 'var(--ink)', opacity: 0.4 }}>미션이 없습니다</p>
@@ -187,11 +207,12 @@ function SectionDisplay({ section, progress, onChange }) {
 // ── 퀘스트 카드 ───────────────────────────────────────────
 
 function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
+  const ri = makeRi(quest)
   const done = isQuestDone(quest, progress)
   const isHierarchical = quest.structure_type === 'hierarchical'
 
   const simpleConditions = (quest.quest_conditions ?? []).sort((a, b) => a.sort_order - b.sort_order)
-  const simpleDone = simpleConditions.filter(c => isCondDone(c, progress)).length
+  const simpleDone = simpleConditions.filter(c => isCondDone(c, progress, ri)).length
   const sections = (quest.quest_sections ?? []).sort((a, b) => a.sort_order - b.sort_order)
 
   const [open, setOpen] = useState(!done)
@@ -204,7 +225,6 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
       className="panel dots-bg rounded-lg overflow-hidden transition-colors"
       style={done ? { borderColor: 'var(--sage)', boxShadow: '0 2px 12px rgba(74,124,95,0.2)' } : {}}
     >
-      {/* 헤더 (토글) */}
       <div
         className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
         onClick={() => setOpen(o => !o)}
@@ -217,6 +237,12 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
           <span className="font-medium text-sm" style={{ color: done ? 'var(--sage)' : 'var(--ink)' }}>
             {done && '✓ '}{quest.name}
           </span>
+          {quest.scope === 'server' && (
+            <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{ background: 'rgba(74,124,95,0.12)', color: 'var(--sage)', border: '1px solid rgba(74,124,95,0.3)' }}>
+              서버 공유
+            </span>
+          )}
           {quest.deadline && (
             <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.45 }}>
               {formatDeadline(quest.deadline)}
@@ -239,16 +265,14 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
         </div>
       </div>
 
-      {/* 본문 */}
       {open && (
         <div className="px-3 pb-3 pt-2" style={{ borderTop: '1px solid rgba(138,106,31,0.18)' }}>
-          {/* 단순형 */}
           {!isHierarchical && (
             <>
               {simpleConditions.length > 0 && (
                 <div className="space-y-2">
                   {simpleConditions.map(cond => (
-                    <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChangeCondition} />
+                    <ConditionRow key={cond.id} cond={cond} progress={progress} onChange={onChangeCondition} ri={ri} />
                   ))}
                 </div>
               )}
@@ -256,11 +280,10 @@ function QuestCard({ quest, progress, onChangeCondition, onRemove }) {
             </>
           )}
 
-          {/* 계층형 */}
           {isHierarchical && (
             <div className="space-y-2">
               {sections.map(section => (
-                <SectionDisplay key={section.id} section={section} progress={progress} onChange={onChangeCondition} />
+                <SectionDisplay key={section.id} section={section} progress={progress} onChange={onChangeCondition} ri={ri} />
               ))}
               {sections.length === 0 && (
                 <p className="text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>분류가 없습니다</p>
@@ -353,10 +376,11 @@ function QuestPickerModal({ allQuests, selectedIds, onToggle, onClose }) {
 
 // ── QuestsPanel ───────────────────────────────────────────
 
-export default function QuestsPanel({ characterId }) {
+export default function QuestsPanel({ character }) {
   const [allQuests, setAllQuests] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [progress, setProgress] = useState({})
+  const [condScopeMap, setCondScopeMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('퀘스트')
   const [showPicker, setShowPicker] = useState(false)
@@ -364,32 +388,48 @@ export default function QuestsPanel({ characterId }) {
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    if (!characterId) return
+    if (!character?.id) return
     setLoading(true)
     async function fetchData() {
       const supabase = createClient()
-      const [{ data: questData }, { data: selectedData }, { data: progressData, error: progressErr }] = await Promise.all([
+      const [{ data: questData }, { data: selectedData }, { data: charProgress }, { data: serverProgress, error: progressErr }] = await Promise.all([
         supabase.from('quests').select(QUEST_SELECT).order('name'),
-        supabase.from('character_quests').select('quest_id').eq('character_id', characterId),
-        supabase.from('quest_progress').select('condition_id, value').eq('character_id', characterId),
+        supabase.from('character_quests').select('quest_id').eq('character_id', character.id),
+        supabase.from('quest_progress').select('condition_id, value, completed_at').eq('character_id', character.id),
+        supabase.from('quest_progress').select('condition_id, value, completed_at').is('character_id', null).eq('server', character.server),
       ])
       setAllQuests(questData ?? [])
       setSelectedIds(new Set((selectedData ?? []).map(r => r.quest_id)))
-      if (progressErr) {
-        setToggleError('진행상황 로드 실패: ' + progressErr.message)
+      if (progressErr) setToggleError('진행상황 로드 실패: ' + progressErr.message)
+
+      // conditionId → scope 맵 구축
+      const scm = {}
+      for (const quest of questData ?? []) {
+        const scope = quest.scope ?? 'character'
+        for (const c of (quest.quest_conditions ?? [])) scm[c.id] = scope
+        for (const s of (quest.quest_sections ?? [])) {
+          for (const m of (s.quest_section_missions ?? [])) {
+            for (const c of (m.quest_mission_conditions ?? [])) scm[c.id] = scope
+          }
+        }
       }
-      setProgress(Object.fromEntries((progressData ?? []).map(p => [p.condition_id, p.value])))
+      setCondScopeMap(scm)
+
+      const progressMap = {}
+      charProgress?.forEach(p => { progressMap[p.condition_id] = { value: p.value ?? 0, completed_at: p.completed_at ?? null } })
+      serverProgress?.forEach(p => { progressMap[p.condition_id] = { value: p.value ?? 0, completed_at: p.completed_at ?? null } })
+      setProgress(progressMap)
       setLoading(false)
     }
     fetchData()
-  }, [characterId])
+  }, [character?.id])
 
   function handleToggle(questId, isSelected) {
     setToggleError(null)
     if (isSelected) {
       setSelectedIds(prev => { const s = new Set(prev); s.delete(questId); return s })
       startTransition(async () => {
-        const result = await removeCharacterQuest(characterId, questId)
+        const result = await removeCharacterQuest(character.id, questId)
         if (result?.error) {
           setSelectedIds(prev => new Set([...prev, questId]))
           setToggleError(result.error)
@@ -398,7 +438,7 @@ export default function QuestsPanel({ characterId }) {
     } else {
       setSelectedIds(prev => new Set([...prev, questId]))
       startTransition(async () => {
-        const result = await addCharacterQuest(characterId, questId)
+        const result = await addCharacterQuest(character.id, questId)
         if (result?.error) {
           setSelectedIds(prev => { const s = new Set(prev); s.delete(questId); return s })
           setToggleError(result.error)
@@ -407,14 +447,23 @@ export default function QuestsPanel({ characterId }) {
     }
   }
 
-  function handleChangeCondition(conditionId, type, rawValue) {
+  function handleChangeCondition(conditionId, type, rawValue, maxValue) {
     const value = type === 'check' ? (rawValue ? 1 : 0) : (parseInt(rawValue) || 0)
-    const oldValue = progress[conditionId] ?? 0
-    setProgress(prev => ({ ...prev, [conditionId]: value }))
+    const isDone = type === 'check' ? value >= 1 : (maxValue != null && value >= maxValue)
+    const completedAt = isDone ? new Date().toISOString() : null
+    const oldEntry = progress[conditionId]
+    setProgress(prev => ({ ...prev, [conditionId]: { value, completed_at: completedAt } }))
+    const scope = condScopeMap[conditionId] ?? 'character'
     startTransition(async () => {
-      const result = await upsertProgress(characterId, conditionId, value)
+      const result = await upsertProgress({
+        characterId: scope === 'character' ? character.id : null,
+        server: scope === 'server' ? character.server : null,
+        conditionId,
+        value,
+        completedAt,
+      })
       if (result?.error) {
-        setProgress(prev => ({ ...prev, [conditionId]: oldValue }))
+        setProgress(prev => ({ ...prev, [conditionId]: oldEntry }))
         setToggleError('저장 실패: ' + result.error)
       }
     })
@@ -442,7 +491,6 @@ export default function QuestsPanel({ characterId }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 flex-shrink-0">
         <div className="flex gap-1 flex-wrap flex-1">
           {categories.map(cat => (
@@ -472,7 +520,6 @@ export default function QuestsPanel({ characterId }) {
         </p>
       )}
 
-      {/* 퀘스트 목록 */}
       {selectedQuests.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="text-4xl mb-2">📜</div>

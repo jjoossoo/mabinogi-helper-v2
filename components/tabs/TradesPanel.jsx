@@ -3,26 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { createClient } from '@/lib/supabase'
 import { upsertTradeProgress, removeTradeProgress } from '@/app/actions/trades'
-
-function getKSTDayStart() {
-  const now = new Date()
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  kst.setUTCHours(0, 0, 0, 0)
-  return new Date(kst.getTime() - 9 * 60 * 60 * 1000)
-}
-
-function getKSTWeekStart() {
-  const dayStart = getKSTDayStart()
-  const kst = new Date(dayStart.getTime() + 9 * 60 * 60 * 1000)
-  const day = kst.getUTCDay()
-  kst.setUTCDate(kst.getUTCDate() - day)
-  return new Date(kst.getTime() - 9 * 60 * 60 * 1000)
-}
-
-function isExpired(prog, reset_cycle) {
-  if (!prog?.completed || !prog.completed_at) return true
-  return new Date(prog.completed_at) < (reset_cycle === 'weekly' ? getKSTWeekStart() : getKSTDayStart())
-}
+import { isCompleted } from '@/lib/resetUtils'
 
 function groupByLocationNpc(tradeList) {
   return tradeList.reduce((acc, t) => {
@@ -35,13 +16,16 @@ function groupByLocationNpc(tradeList) {
 }
 
 const SCOPE_LABELS = { character: '캐릭터', server: '서버' }
-const CYCLE_LABELS = { daily: '일일', weekly: '주간' }
+const RESET_LABELS = { none: '없음', daily: '일일', weekly: '주간' }
+
+function isTradeDone(trade, prog) {
+  if (!prog?.completed) return false
+  if (!trade.reset_type || trade.reset_type === 'none') return true
+  return isCompleted(prog.completed_at, trade.reset_type, trade.reset_day, trade.reset_hour)
+}
 
 function isTradesDone(list, progress) {
-  return list.length > 0 && list.every(t => {
-    const prog = progress[t.id]
-    return prog?.completed && !isExpired(prog, t.reset_cycle)
-  })
+  return list.length > 0 && list.every(t => isTradeDone(t, progress[t.id]))
 }
 
 function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
@@ -87,7 +71,7 @@ function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
 }
 
 function TradeRow({ trade, prog, onToggle, onRemove }) {
-  const done = prog?.completed && !isExpired(prog, trade.reset_cycle)
+  const done = isTradeDone(trade, prog)
 
   return (
     <div className="px-4 py-3 flex items-center gap-3"
@@ -115,10 +99,12 @@ function TradeRow({ trade, prog, onToggle, onRemove }) {
             style={{ background: 'rgba(74,124,95,0.12)', color: 'var(--sage)', border: '1px solid rgba(74,124,95,0.3)' }}>
             {SCOPE_LABELS[trade.scope]}
           </span>
-          <span className="text-xs px-1.5 py-0.5 rounded"
-            style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
-            {CYCLE_LABELS[trade.reset_cycle]}
-          </span>
+          {trade.reset_type && trade.reset_type !== 'none' && (
+            <span className="text-xs px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
+              {RESET_LABELS[trade.reset_type]}
+            </span>
+          )}
         </div>
       </div>
 
@@ -218,10 +204,12 @@ function AddModal({ unaddedTrades, onAdd, onClose }) {
                                         style={{ background: 'rgba(74,124,95,0.12)', color: 'var(--sage)', border: '1px solid rgba(74,124,95,0.3)' }}>
                                         {SCOPE_LABELS[trade.scope]}
                                       </span>
-                                      <span className="text-xs px-1.5 py-0.5 rounded"
-                                        style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
-                                        {CYCLE_LABELS[trade.reset_cycle]}
-                                      </span>
+                                      {trade.reset_type && trade.reset_type !== 'none' && (
+                                        <span className="text-xs px-1.5 py-0.5 rounded"
+                                          style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                                          {RESET_LABELS[trade.reset_type]}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                   <button type="button"
@@ -284,7 +272,6 @@ export default function TradesPanel({ character }) {
     setLoading(false)
   }
 
-  // progress에 항목이 있는 것만 "추가된" 교환
   const addedTrades = trades.filter(t => progress[t.id] !== undefined)
   const unaddedTrades = trades.filter(t => progress[t.id] === undefined)
   const locationGroups = groupByLocationNpc(addedTrades)
@@ -294,7 +281,6 @@ export default function TradesPanel({ character }) {
   }
 
   async function handleAdd(trade) {
-    // optimistic: progress 항목 추가
     setProgress(prev => ({ ...prev, [trade.id]: { completed: false, completed_at: null } }))
     const result = await upsertTradeProgress({
       trade_id: trade.id,
@@ -322,7 +308,8 @@ export default function TradesPanel({ character }) {
 
   function handleToggle(trade) {
     const current = progress[trade.id]
-    const newCompleted = isExpired(current, trade.reset_cycle) ? true : !current?.completed
+    const currentlyDone = isTradeDone(trade, current)
+    const newCompleted = !currentlyDone
     setProgress(prev => ({
       ...prev,
       [trade.id]: { completed: newCompleted, completed_at: newCompleted ? new Date().toISOString() : null },
@@ -353,7 +340,6 @@ export default function TradesPanel({ character }) {
 
   return (
     <>
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.4 }}>
           {addedTrades.length > 0 ? `${addedTrades.length}개 교환` : ''}
@@ -367,7 +353,6 @@ export default function TradesPanel({ character }) {
         </button>
       </div>
 
-      {/* 비어있을 때 */}
       {addedTrades.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--parchment)', opacity: 0.25 }}>
           <div className="text-5xl mb-3">🔄</div>
@@ -375,13 +360,11 @@ export default function TradesPanel({ character }) {
         </div>
       )}
 
-      {/* 위치 → NPC → 교환 */}
       <div className="space-y-4">
         {Object.entries(locationGroups).map(([loc, npcGroups]) => {
           const locCollapsed = collapsedLocs.has(loc)
           return (
             <div key={loc}>
-              {/* 위치 토글 헤더 */}
               <button type="button" onClick={() => toggleLoc(loc)}
                 className="flex items-center gap-2 w-full mb-2 text-left">
                 <span className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.45 }}>

@@ -66,13 +66,42 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon 공개 키
 
 ## 주요 기능
 
+### 초기화 시스템 (lib/resetUtils.js)
+- 퀘스트·물물교환·콘텐츠 공통으로 사용
+- `reset_type`: `'none'` / `'daily'` / `'weekly'`
+- `reset_day`: 0~6 (0=일, 1=월 ... 주간일 때만 사용)
+- `reset_hour`: 0~23 (KST 기준 초기화 시각)
+- `getLastResetTime(type, day, hour)` → 가장 최근 초기화 시각(UTC Date) 반환
+- `isCompleted(completedAt, type, day, hour)` → completedAt이 마지막 초기화 이후면 true
+- `reset_type='none'`: completedAt이 있으면 항상 true (영구 완료)
+- 관리자 등록 UI: `components/admin/ResetFields.jsx` — 프리셋(매일 6시, 매주 월 9시) + 직접 입력
+
 ### 물물교환 (trades)
-- `trades` 테이블: NPC별 교환 정보 (give/receive 아이템·수량, scope, reset_cycle)
+- `trades` 테이블: NPC별 교환 정보 (give/receive 아이템·수량, scope, reset_type/day/hour)
 - `trade_progress` 테이블: 유저별 완료 기록 (partial unique indexes)
   - `character_id IS NOT NULL` → `(user_id, character_id, trade_id)` 유니크
   - `character_id IS NULL` → `(user_id, server, trade_id)` 유니크
 - `scope`: `'character'` (캐릭터별) / `'server'` (서버 공통)
-- `reset_cycle`: `'daily'` / `'weekly'` — 클라이언트에서 KST 자정/주 기준으로 만료 체크
+- 완료 판단: `isTradeDone(trade, prog)` — `reset_type='none'`이면 completed 그대로, 아니면 `isCompleted(completed_at, ...)`
 - `upsertTradeProgress`: partial index 때문에 select-then-update-or-insert 패턴 사용
 - 관리자: `components/admin/TradesTab.jsx` / `app/actions/trades.js`
 - 유저 탭: `components/tabs/TradesPanel.jsx` — optimistic toggle
+
+### 퀘스트/미션 (quests)
+- `quests.scope`: `'character'` (캐릭터별) / `'server'` (서버 공통, 같은 서버 캐릭터 중 1개 완료 시 공유)
+- `quest_progress` 저장 구조: `{ user_id, character_id, server, condition_id, value, completed_at }`
+  - character scope: `character_id` 사용, `server = null`
+  - server scope: `character_id = null`, `server` 사용
+  - partial unique indexes: `(character_id, condition_id) WHERE character_id IS NOT NULL`, `(user_id, server, condition_id) WHERE server IS NOT NULL AND character_id IS NULL`
+- `handleChangeCondition(condId, type, rawValue, maxValue)` — condScopeMap으로 scope 조회 후 upsertProgress 호출
+- `upsertProgress({ characterId, server, conditionId, value, completedAt })` — 객체 파라미터, trades 패턴과 동일
+- 완료 판단: `reset_type='none'`이면 value 기반, 아니면 `isCompleted(completed_at, ...)`
+- 계층형 reset info 전달: `ri = { type, day, hour }`을 QuestCard→SectionDisplay→MissionDisplay→ConditionRow로 prop 전달
+- `QuestsPanel`은 `character` (전체 객체) prop을 받음 — `character.id`, `character.server` 모두 필요
+- 데이터 로드 시 character-scope + server-scope progress 동시 조회 후 condition_id 기준으로 병합
+
+### 콘텐츠 (contents)
+- `contents` 테이블: 콘텐츠명, 조건, 보상, reset_type/day/hour
+- `content_progress`: `{ value, completed_at, updated_at }`
+- 관리자: `components/admin/ContentsTab.jsx` / `app/actions/contents.js`
+- 유저 탭: `components/tabs/ContentsPanel.jsx`

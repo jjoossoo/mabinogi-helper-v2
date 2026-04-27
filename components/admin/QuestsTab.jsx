@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { addQuest, updateQuest, deleteQuest } from '@/app/actions/admin'
+import ResetFields from './ResetFields'
 
 const CATEGORIES = ['퀘스트', '아르바이트', '이벤트', '미션']
 const SUB_CATEGORIES = {
@@ -11,14 +12,21 @@ const SUB_CATEGORIES = {
   '미션': ['일일', '주간', '길드'],
 }
 
+const RESET_DEFAULTS = { reset_type: 'none', reset_day: null, reset_hour: 6 }
+const SCOPE_DEFAULT = { scope: 'character' }
+
 const EMPTY_SIMPLE = {
   structureType: 'simple',
   name: '', category: '퀘스트', sub_category: '', description: '', deadline: '',
+  ...RESET_DEFAULTS,
+  ...SCOPE_DEFAULT,
   conditions: [], rewards: [],
 }
 const EMPTY_HIERARCHICAL = {
   structureType: 'hierarchical',
   name: '', category: '퀘스트', sub_category: '', description: '', deadline: '',
+  ...RESET_DEFAULTS,
+  ...SCOPE_DEFAULT,
   sections: [],
 }
 
@@ -38,6 +46,58 @@ function isExpired(deadline) {
 function hasUnsavedContent(form) {
   if (form.structureType === 'simple') return form.conditions.length > 0 || form.rewards.length > 0
   return (form.sections ?? []).length > 0
+}
+
+// ── 아이템 검색 셀렉트 ───────────────────────────────────
+
+function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색...', className = '' }) {
+  const [editing, setEditing] = useState(false)
+  const [query, setQuery] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const fn = e => { if (!ref.current?.contains(e.target)) { setEditing(false); setQuery('') } }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [])
+
+  const filtered = (query.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options
+  ).slice(0, 12)
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <input
+        value={editing ? query : (selectedLabel ?? '')}
+        onChange={e => setQuery(e.target.value)}
+        onFocus={() => { setEditing(true); setQuery('') }}
+        onKeyDown={e => e.key === 'Escape' && (setEditing(false), setQuery(''))}
+        placeholder={placeholder}
+        className="input-field w-full rounded px-2 py-1 text-xs"
+      />
+      {editing && (
+        <ul className="absolute z-20 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded shadow-xl"
+          style={{ backgroundColor: 'var(--panel-bg)', border: '1.5px solid var(--gold)' }}>
+          {filtered.map(opt => (
+            <li key={opt.value}>
+              <button type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { onSelect(opt); setEditing(false); setQuery('') }}
+                className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-[rgba(201,168,76,0.1)]"
+                style={{ color: 'var(--ink)', borderBottom: '1px solid rgba(138,106,31,0.1)' }}>
+                {opt.emoji && <span>{opt.emoji}</span>}
+                <span>{opt.label}</span>
+              </button>
+            </li>
+          ))}
+          {filtered.length === 0 && (
+            <li className="px-3 py-2 text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>검색 결과 없음</li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 // ── 공용 서브컴포넌트 ─────────────────────────────────────
@@ -85,6 +145,8 @@ function ConditionEditor({ conditions, onChange }) {
 }
 
 function RewardEditor({ rewards, items, onChange }) {
+  const itemOptions = items.map(i => ({ value: i.id, label: i.name, emoji: i.emoji }))
+
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
@@ -94,24 +156,28 @@ function RewardEditor({ rewards, items, onChange }) {
           className="btn-ghost-sm px-2 py-0.5 rounded">+ 추가</button>
       </div>
       <div className="space-y-1.5">
-        {rewards.map((r, i) => (
-          <div key={i} className="flex gap-1.5 items-center">
-            <select value={r.item_id}
-              onChange={e => onChange(rewards.map((rw, idx) => idx === i ? { ...rw, item_id: e.target.value } : rw))}
-              className="input-field flex-1 rounded px-2 py-1 text-xs">
-              <option value="">아이템 선택</option>
-              {items.map(it => <option key={it.id} value={it.id}>{it.emoji} {it.name}</option>)}
-            </select>
-            <input type="number" value={r.amount} min={1}
-              onChange={e => onChange(rewards.map((rw, idx) => idx === i ? { ...rw, amount: parseInt(e.target.value) || 1 } : rw))}
-              onFocus={e => e.target.select()}
-              className="input-field w-14 rounded px-1.5 py-1 text-xs text-center" />
-            <button type="button"
-              onClick={() => onChange(rewards.filter((_, idx) => idx !== i))}
-              className="text-xs px-1 transition-opacity hover:opacity-70"
-              style={{ color: 'var(--crimson-light)' }}>✕</button>
-          </div>
-        ))}
+        {rewards.map((r, i) => {
+          const item = items.find(it => it.id === r.item_id)
+          return (
+            <div key={i} className="flex gap-1.5 items-center">
+              <SearchSelect
+                selectedLabel={item ? `${item.emoji} ${item.name}` : ''}
+                onSelect={opt => onChange(rewards.map((rw, idx) => idx === i ? { ...rw, item_id: opt.value } : rw))}
+                options={itemOptions}
+                placeholder="아이템 검색..."
+                className="flex-1"
+              />
+              <input type="number" value={r.amount} min={1}
+                onChange={e => onChange(rewards.map((rw, idx) => idx === i ? { ...rw, amount: parseInt(e.target.value) || 1 } : rw))}
+                onFocus={e => e.target.select()}
+                className="input-field w-14 rounded px-1.5 py-1 text-xs text-center" />
+              <button type="button"
+                onClick={() => onChange(rewards.filter((_, idx) => idx !== i))}
+                className="text-xs px-1 transition-opacity hover:opacity-70"
+                style={{ color: 'var(--crimson-light)' }}>✕</button>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -226,6 +292,10 @@ function QuestModal({ quest, items, onClose, onSave }) {
       sub_category: quest.sub_category ?? '',
       description: quest.description ?? '',
       deadline: quest.deadline ?? '',
+      reset_type: quest.reset_type ?? 'none',
+      reset_day: quest.reset_day ?? null,
+      reset_hour: quest.reset_hour ?? 6,
+      scope: quest.scope ?? 'character',
     }
     if (base.structureType === 'hierarchical') {
       return {
@@ -289,6 +359,10 @@ function QuestModal({ quest, items, onClose, onSave }) {
       description: form.description,
       deadline: form.deadline || null,
       structure_type: form.structureType,
+      reset_type: form.reset_type,
+      reset_day: form.reset_day ?? null,
+      reset_hour: form.reset_hour ?? 6,
+      scope: form.scope ?? 'character',
     }
 
     const data = form.structureType === 'simple'
@@ -404,6 +478,37 @@ function QuestModal({ quest, items, onClose, onSave }) {
             <input type="date" value={form.deadline}
               onChange={e => set('deadline', e.target.value)}
               className="input-field rounded px-3 py-2 text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-2 font-medium" style={{ color: 'var(--ink)' }}>완료 범위</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'character', label: '캐릭터별', desc: '캐릭터마다 개별 완료 처리' },
+                { id: 'server', label: '서버별', desc: '서버 내 1개 완료 시 공유' },
+              ].map(({ id, label, desc }) => (
+                <button key={id} type="button"
+                  onClick={() => set('scope', id)}
+                  className="text-left rounded px-3 py-2.5 transition-colors"
+                  style={form.scope === id
+                    ? { border: '1.5px solid var(--gold)', backgroundColor: 'rgba(201,168,76,0.15)', color: 'var(--gold-dark)' }
+                    : { border: '1px solid rgba(138,106,31,0.3)', backgroundColor: 'var(--parchment-dark)', color: 'var(--ink)' }
+                  }>
+                  <div className="text-xs font-semibold">{label}</div>
+                  <div className="text-xs mt-0.5" style={{ opacity: 0.55 }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs mb-2 font-medium" style={{ color: 'var(--ink)' }}>초기화 설정</label>
+            <ResetFields
+              resetType={form.reset_type}
+              resetDay={form.reset_day}
+              resetHour={form.reset_hour}
+              onChange={(k, v) => set(k, v)}
+            />
           </div>
 
           {form.structureType === 'simple' && (
@@ -522,6 +627,14 @@ export default function QuestsTab({ quests, setQuests, items }) {
                       style={{ color: 'var(--ink)', opacity: 0.55, border: '1px solid rgba(138,106,31,0.3)', background: 'rgba(45,31,10,0.06)' }}
                     >
                       계층형 · {(quest.quest_sections ?? []).length}분류
+                    </span>
+                  )}
+                  {quest.scope === 'server' && (
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(74,124,95,0.12)', color: 'var(--sage)', border: '1px solid rgba(74,124,95,0.3)' }}
+                    >
+                      서버 공유
                     </span>
                   )}
                   {quest.deadline && (

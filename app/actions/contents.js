@@ -20,11 +20,11 @@ const CONTENT_SELECT = `
 export async function addContent(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, reset_cycle, sort_order, conditions, rewards } = data
+  const { name, reset_type, reset_day, reset_hour, sort_order, conditions, rewards } = data
 
   const { data: content, error } = await db
     .from('contents')
-    .insert({ name, reset_cycle, sort_order: sort_order ?? 0 })
+    .insert({ name, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6, sort_order: sort_order ?? 0 })
     .select('id')
     .single()
   if (error) return { error: error.message }
@@ -51,9 +51,9 @@ export async function addContent(data) {
 export async function updateContent(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, reset_cycle, sort_order, conditions, rewards } = data
+  const { name, reset_type, reset_day, reset_hour, sort_order, conditions, rewards } = data
 
-  const { error } = await db.from('contents').update({ name, reset_cycle, sort_order: sort_order ?? 0 }).eq('id', id)
+  const { error } = await db.from('contents').update({ name, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6, sort_order: sort_order ?? 0 }).eq('id', id)
   if (error) return { error: error.message }
 
   // Replace conditions
@@ -109,7 +109,7 @@ export async function removeCharacterContent(characterId, contentId) {
   return { success: true }
 }
 
-export async function upsertContentProgress(characterId, conditionId, value) {
+export async function upsertContentProgress(characterId, conditionId, value, completedAt) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: '로그인 필요' }
@@ -125,17 +125,18 @@ export async function upsertContentProgress(characterId, conditionId, value) {
     .eq('condition_id', conditionId)
     .maybeSingle()
 
+  const now = new Date().toISOString()
   if (existing) {
     const { error } = await supabase
       .from('content_progress')
-      .update({ value, updated_at: new Date().toISOString() })
+      .update({ value, completed_at: completedAt ?? null, updated_at: now })
       .eq('character_id', characterId)
       .eq('condition_id', conditionId)
     if (error) return { error: error.message }
   } else {
     const { error } = await supabase
       .from('content_progress')
-      .insert({ character_id: characterId, condition_id: conditionId, value, updated_at: new Date().toISOString() })
+      .insert({ character_id: characterId, condition_id: conditionId, value, completed_at: completedAt ?? null, updated_at: now })
     if (error) return { error: error.message }
   }
   return { success: true }

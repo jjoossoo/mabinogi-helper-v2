@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { addContent, updateContent, deleteContent } from '@/app/actions/contents'
+import ResetFields from './ResetFields'
 
-const CYCLE_LABELS = { daily: '일일', weekly: '주간' }
+const RESET_LABELS = { none: '없음', daily: '일일', weekly: '주간' }
 const COND_TYPE_LABELS = { check: '체크', progress: '진행도' }
 
 function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색...', className = '' }) {
@@ -59,7 +60,9 @@ function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색.
 function ContentModal({ content, items, onSave, onClose }) {
   const [form, setForm] = useState({
     name: content?.name ?? '',
-    reset_cycle: content?.reset_cycle ?? 'daily',
+    reset_type: content?.reset_type ?? 'none',
+    reset_day: content?.reset_day ?? null,
+    reset_hour: content?.reset_hour ?? 6,
     sort_order: content?.sort_order ?? 0,
   })
   const [conditions, setConditions] = useState(
@@ -116,6 +119,8 @@ function ContentModal({ content, items, onSave, onClose }) {
       const payload = {
         ...form,
         sort_order: Number(form.sort_order) || 0,
+        reset_day: form.reset_day ?? null,
+        reset_hour: form.reset_hour ?? 6,
         conditions: validConds.map(c => ({
           name: c.name.trim(),
           type: c.type,
@@ -165,17 +170,13 @@ function ContentModal({ content, items, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--ink)' }}>초기화 주기</label>
-            <div className="flex gap-4">
-              {['daily', 'weekly'].map(c => (
-                <label key={c} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="reset_cycle" value={c}
-                    checked={form.reset_cycle === c} onChange={() => set('reset_cycle', c)}
-                    style={{ accentColor: 'var(--sage)' }} />
-                  <span className="text-sm" style={{ color: 'var(--ink)' }}>{CYCLE_LABELS[c]}</span>
-                </label>
-              ))}
-            </div>
+            <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--ink)' }}>초기화 설정</label>
+            <ResetFields
+              resetType={form.reset_type}
+              resetDay={form.reset_day}
+              resetHour={form.reset_hour}
+              onChange={(k, v) => set(k, v)}
+            />
           </div>
 
           {/* 조건 */}
@@ -269,7 +270,7 @@ export default function ContentsTab({ contents, setContents, items }) {
   const [deletingId, setDeletingId] = useState(null)
   const [activeTab, setActiveTab] = useState('daily')
 
-  const filtered = contents.filter(c => c.reset_cycle === activeTab)
+  const filtered = contents.filter(c => c.reset_type === activeTab)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
 
   function handleSave(content) {
@@ -298,7 +299,7 @@ export default function ContentsTab({ contents, setContents, items }) {
           {['daily', 'weekly'].map(c => (
             <button key={c} onClick={() => setActiveTab(c)}
               className={`px-4 py-1.5 rounded text-xs font-medium transition-colors ${activeTab === c ? 'btn-primary' : 'btn-ghost-sm'}`}>
-              {CYCLE_LABELS[c]} ({contents.filter(ct => ct.reset_cycle === c).length})
+              {RESET_LABELS[c]} ({contents.filter(ct => ct.reset_type === c).length})
             </button>
           ))}
         </div>
@@ -308,7 +309,7 @@ export default function ContentsTab({ contents, setContents, items }) {
       <div className="flex-1 overflow-y-auto dots-bg p-4 space-y-3">
         {filtered.length === 0 && (
           <p className="text-center text-sm py-12" style={{ color: 'var(--ink)', opacity: 0.35 }}>
-            등록된 {CYCLE_LABELS[activeTab]} 콘텐츠가 없습니다
+            등록된 {RESET_LABELS[activeTab]} 콘텐츠가 없습니다
           </p>
         )}
 
@@ -324,7 +325,7 @@ export default function ContentsTab({ contents, setContents, items }) {
                 </span>
                 <span className="text-xs px-1.5 py-0.5 rounded"
                   style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.3)' }}>
-                  {CYCLE_LABELS[content.reset_cycle]}
+                  {RESET_LABELS[content.reset_type] ?? '없음'}
                 </span>
                 <button onClick={() => setModal(content)} className="btn-ghost-sm px-2 py-1 rounded text-xs">수정</button>
                 <button onClick={() => handleDelete(content)} disabled={deletingId === content.id}

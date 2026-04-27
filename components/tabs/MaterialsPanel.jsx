@@ -29,14 +29,11 @@ function calcMaterials(itemId, amount, itemsMap, recipesMap, craftOwned, craftPl
   }
 }
 
-export default function MaterialsPanel() {
+export default function MaterialsPanel({ targets, setTargets, craftOwned, setCraftOwned, baseOwned, setBaseOwned }) {
   const [items, setItems] = useState([])
   const [recipesMap, setRecipesMap] = useState({})
   const [loading, setLoading] = useState(true)
 
-  const [targets, setTargets] = useState([])
-  const [craftOwned, setCraftOwned] = useState({})
-  const [baseOwned, setBaseOwned] = useState({})
   const [search, setSearch] = useState('')
   const [expandedItem, setExpandedItem] = useState(null)
 
