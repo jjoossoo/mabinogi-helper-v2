@@ -4,7 +4,7 @@ const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 const PRESETS = [
   { label: '매일 오전 6시', type: 'daily', day: null, hour: 6 },
-  { label: '매주 월요일 오전 9시', type: 'weekly', day: 1, hour: 9 },
+  { label: '매주 월요일 오전 6시', type: 'weekly', day: 1, hour: 6 },
 ]
 
 function matchPreset(type, day, hour) {
