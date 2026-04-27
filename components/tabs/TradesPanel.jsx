@@ -28,7 +28,7 @@ function isTradesDone(list, progress) {
   return list.length > 0 && list.every(t => isTradeDone(t, progress[t.id]))
 }
 
-function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
+function NpcGroup({ npc, list, progress, onToggle, onRemove, onAddToMaterials }) {
   const allDone = isTradesDone(list, progress)
   const [open, setOpen] = useState(!allDone)
 
@@ -62,6 +62,7 @@ function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
               prog={progress[trade.id]}
               onToggle={() => onToggle(trade)}
               onRemove={() => onRemove(trade)}
+              onAddToMaterials={onAddToMaterials}
             />
           ))}
         </div>
@@ -70,7 +71,7 @@ function NpcGroup({ npc, list, progress, onToggle, onRemove }) {
   )
 }
 
-function TradeRow({ trade, prog, onToggle, onRemove }) {
+function TradeRow({ trade, prog, onToggle, onRemove, onAddToMaterials }) {
   const done = isTradeDone(trade, prog)
 
   return (
@@ -108,6 +109,14 @@ function TradeRow({ trade, prog, onToggle, onRemove }) {
         </div>
       </div>
 
+      {trade.give_item && (
+        <button
+          onClick={() => onAddToMaterials(trade.give_item.id, trade.give_amount)}
+          className="flex-shrink-0 text-xs px-2 py-0.5 rounded transition-opacity opacity-50 hover:opacity-90"
+          style={{ color: 'var(--gold-dark)', border: '1px solid rgba(201,168,76,0.4)', background: 'rgba(201,168,76,0.08)', whiteSpace: 'nowrap' }}
+          title={`${trade.give_item.name} 재료 계산기에 추가`}
+        >재료계산기 등록</button>
+      )}
       <button
         onClick={onRemove}
         className="flex-shrink-0 w-5 h-5 flex items-center justify-center text-xs transition-opacity opacity-30 hover:opacity-80"
@@ -236,7 +245,7 @@ function AddModal({ unaddedTrades, onAdd, onClose }) {
   )
 }
 
-export default function TradesPanel({ character }) {
+export default function TradesPanel({ character, onAddToMaterials }) {
   const [trades, setTrades] = useState([])
   const [progress, setProgress] = useState({})
   const [collapsedLocs, setCollapsedLocs] = useState(new Set())
@@ -386,6 +395,7 @@ export default function TradesPanel({ character }) {
                       progress={progress}
                       onToggle={handleToggle}
                       onRemove={handleRemove}
+                      onAddToMaterials={onAddToMaterials}
                     />
                   ))}
                 </div>

@@ -34,6 +34,13 @@ export default function MainView({ initialCharacters }) {
 
   const selectedChar = characters.find(c => c.id === selectedId)
 
+  function handleAddToMaterials(itemId, amount) {
+    setMaterialsTargets(prev =>
+      prev.some(t => t.itemId === itemId) ? prev : [...prev, { itemId, amount: amount ?? 1, owned: 0 }]
+    )
+    setActiveTab('materials')
+  }
+
   function handleAddSuccess(character) {
     setCharacters(prev => [...prev, character])
     setSelectedId(character.id)
@@ -265,7 +272,7 @@ export default function MainView({ initialCharacters }) {
             ) : activeTab === 'contents' ? (
               <ContentsPanel characterId={selectedChar.id} />
             ) : activeTab === 'trades' ? (
-              <TradesPanel character={selectedChar} />
+              <TradesPanel character={selectedChar} onAddToMaterials={handleAddToMaterials} />
             ) : (
               <MaterialsPanel
               targets={materialsTargets}
