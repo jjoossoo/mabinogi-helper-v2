@@ -108,3 +108,18 @@ export async function deleteDungeon(id) {
   if (error) return { error: error.message }
   return { success: true }
 }
+
+// ── 지도 에디터 위치 저장 ──────────────────────────────────────────────
+
+export async function updateLocationPositions(positions) {
+  if (!await requireAdmin()) return { error: '권한 없음' }
+  const db = createAdminClient()
+  const results = await Promise.all(
+    positions.map(({ id, x, y }) =>
+      db.from('locations').update({ x, y }).eq('id', id)
+    )
+  )
+  const err = results.find(r => r.error)
+  if (err) return { error: err.error.message }
+  return { success: true }
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { addLocation, updateLocation, deleteLocation, addConnection, updateConnection, deleteConnection, addDungeon, updateDungeon, deleteDungeon } from '@/app/actions/locations'
 
 const DUNGEON_TYPE_LABELS = { dungeon: '던전', field_boss: '필드보스' }
@@ -396,21 +397,25 @@ function ConnectionsSection({ connections, setConnections, locations }) {
                     <div className="flex items-center gap-1 justify-center">
                       <input type="number" value={editTime} min={1}
                         onChange={e => setEditTime(parseInt(e.target.value) || 1)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleUpdateTime(conn.id); if (e.key === 'Escape') setEditingId(null) }}
                         onFocus={e => e.target.select()}
-                        className="input-field w-16 rounded px-2 py-1 text-xs text-center" />
+                        className="input-field w-16 rounded px-2 py-1 text-xs text-center" autoFocus />
                       <button onClick={() => handleUpdateTime(conn.id)} className="btn-primary text-xs px-2 py-1 rounded">✓</button>
                       <button onClick={() => setEditingId(null)} className="btn-ghost-sm text-xs px-1 py-1 rounded">✕</button>
                     </div>
                   ) : (
-                    <button onClick={() => { setEditingId(conn.id); setEditTime(conn.travel_time) }}
-                      className="text-xs hover:opacity-70" style={{ color: 'var(--ink)' }}>
-                      {conn.travel_time}분
-                    </button>
+                    <span className="text-xs" style={{ color: 'var(--ink)' }}>{conn.travel_time}분</span>
                   )}
                 </td>
                 <td className="px-4 py-2.5">
-                  <button onClick={() => handleDelete(conn.id)}
-                    className="btn-danger text-xs px-2 py-1 rounded float-right">삭제</button>
+                  <div className="flex gap-2 justify-end">
+                    {editingId !== conn.id && (
+                      <button onClick={() => { setEditingId(conn.id); setEditTime(conn.travel_time) }}
+                        className="btn-ghost-sm text-xs px-2 py-1 rounded">수정</button>
+                    )}
+                    <button onClick={() => handleDelete(conn.id)}
+                      className="btn-danger text-xs px-2 py-1 rounded">삭제</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -512,7 +517,7 @@ export default function LocationsTab({ locations, setLocations, connections, set
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--panel-bg)' }}>
-      <div className="flex px-2 pt-2 gap-1 flex-shrink-0"
+      <div className="flex items-end px-2 pt-2 gap-1 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}>
         {SECTIONS.map(s => (
           <button
@@ -529,6 +534,19 @@ export default function LocationsTab({ locations, setLocations, connections, set
             {s.label}
           </button>
         ))}
+        <div className="flex-1" />
+        <Link
+          href="/locations"
+          target="_blank"
+          className="mb-1.5 mr-1 text-xs px-3 py-1.5 rounded transition-colors"
+          style={{
+            color: 'var(--gold-dark)',
+            border: '1px solid rgba(201,168,76,0.4)',
+            backgroundColor: 'rgba(201,168,76,0.07)',
+          }}
+        >
+          🗺 지도 에디터 열기
+        </Link>
       </div>
       <div className="flex-1 overflow-hidden">
         {activeSection === 'locations' && <LocationsSection locations={locations} setLocations={setLocations} />}

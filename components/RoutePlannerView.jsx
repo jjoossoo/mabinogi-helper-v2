@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { buildGraph, calculateRoute } from '@/lib/routeCalculator'
 import { isCompleted } from '@/lib/resetUtils'
 import { CLASSES } from '@/data/classes'
+import RouteMapView from '@/components/RouteMapView'
 
 const CLASS_MAP = Object.fromEntries(CLASSES.map(c => [c.id, c]))
 
@@ -297,88 +298,107 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 md:overflow-y-auto p-4 md:p-6">
-        {!route ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-48"
-            style={{ color: 'var(--parchment)', opacity: 0.25 }}>
-            <div className="text-5xl mb-3">🗺</div>
-            <p className="text-sm text-center">목적지를 선택하고 경로를 계산하세요</p>
-          </div>
-        ) : route.segments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-48"
-            style={{ color: 'var(--parchment)', opacity: 0.4 }}>
-            <p className="text-sm text-center">경로를 계산할 수 없습니다.<br />지역 연결 설정을 확인해주세요.</p>
-          </div>
-        ) : (
-          <div className="space-y-3 max-w-xl">
-            {/* Summary */}
-            <div className="px-4 py-3 rounded-lg"
-              style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.35)' }}>
-              <span className="font-serif font-semibold text-sm" style={{ color: 'var(--gold-dark)' }}>
-                총 이동 시간: {route.totalTime}분
-              </span>
-              <span className="ml-3 text-xs" style={{ color: 'var(--parchment)', opacity: 0.55 }}>
-                {route.segments.length}개 구간 · {destinationLocIds.length}개 목적지
-              </span>
-            </div>
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Map */}
+        <div className="flex-1 min-h-0" style={{ minHeight: '260px' }}>
+          <RouteMapView
+            locations={locations}
+            connections={connections}
+            route={route}
+            startLocationId={startLocationId}
+            destinationLocIds={destinationLocIds}
+          />
+        </div>
 
-            {/* Start */}
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                style={{ backgroundColor: 'rgba(74,124,95,0.2)', border: '1.5px solid var(--sage)', color: 'var(--sage)' }}>
-                출
+        {/* Route summary */}
+        <div
+          className="flex-shrink-0 overflow-y-auto"
+          style={{ maxHeight: '220px', borderTop: '1.5px solid rgba(201,168,76,0.25)', backgroundColor: '#110c04' }}
+        >
+          {!route ? (
+            <div className="flex items-center justify-center py-6"
+              style={{ color: 'var(--parchment)', opacity: 0.25 }}>
+              <p className="text-xs text-center">목적지를 선택하고 경로를 계산하세요</p>
+            </div>
+          ) : route.segments.length === 0 ? (
+            <div className="flex items-center justify-center py-6"
+              style={{ color: 'var(--parchment)', opacity: 0.4 }}>
+              <p className="text-xs text-center">경로를 계산할 수 없습니다. 지역 연결 설정을 확인해주세요.</p>
+            </div>
+          ) : (
+            <div className="p-3">
+              {/* Summary bar */}
+              <div className="flex items-center gap-3 mb-2 px-1">
+                <span className="font-serif font-semibold text-xs" style={{ color: 'var(--gold-dark)' }}>
+                  총 {route.totalTime}분
+                </span>
+                <span className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.45 }}>
+                  {route.segments.length}개 구간 · {destinationLocIds.length}개 목적지
+                </span>
               </div>
-              <span className="text-sm font-medium" style={{ color: 'var(--parchment)' }}>
-                {startLocation?.emoji} {startLocation?.name}
-              </span>
-            </div>
 
-            {/* Segments */}
-            {route.segments.map((seg, idx) => {
-              const toLoc = locationMap[seg.to]
-              const tasks = getTasksAtLocation(seg.to)
-              const via = seg.path.slice(1, -1).map(id => locationMap[id]).filter(Boolean)
-              const unreachable = seg.time === Infinity || seg.time >= 1e9
-
-              return (
-                <div key={idx} className="flex gap-3">
-                  <div className="flex flex-col items-center flex-shrink-0 pt-0">
-                    <div className="w-px flex-none mt-1" style={{ height: '16px', backgroundColor: 'rgba(201,168,76,0.25)' }} />
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ backgroundColor: unreachable ? 'rgba(139,32,32,0.15)' : 'rgba(201,168,76,0.12)', border: `1.5px solid ${unreachable ? 'var(--crimson)' : 'var(--gold)'}`, color: unreachable ? 'var(--crimson-light)' : 'var(--gold-dark)' }}>
-                      {idx + 1}
-                    </div>
+              {/* Steps inline */}
+              <div className="flex flex-wrap items-center gap-x-0 gap-y-1">
+                {/* Start */}
+                <div className="flex items-center gap-1">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                    style={{ backgroundColor: 'rgba(74,124,95,0.2)', border: '1.5px solid var(--sage)', color: 'var(--sage)' }}>
+                    출
                   </div>
-                  <div className="pb-3 flex-1 pt-4">
-                    {via.length > 0 && (
-                      <div className="mb-1 text-xs" style={{ color: 'var(--parchment)', opacity: 0.38 }}>
-                        경유: {via.map(l => `${l.emoji} ${l.name}`).join(' → ')}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm" style={{ color: 'var(--parchment)' }}>
-                        {toLoc?.emoji} {toLoc?.name}
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded"
-                        style={unreachable
-                          ? { background: 'rgba(139,32,32,0.1)', border: '1px solid rgba(139,32,32,0.4)', color: 'var(--crimson-light)' }
-                          : { background: 'rgba(74,124,95,0.1)', border: '1px solid rgba(74,124,95,0.3)', color: 'var(--sage)' }}>
-                        {unreachable ? '도달 불가' : `${seg.time}분`}
-                      </span>
-                    </div>
-                    {tasks.length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5">
-                        {tasks.map((task, i) => (
-                          <li key={i} className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.6 }}>• {task}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  <span className="text-xs" style={{ color: 'var(--parchment)' }}>
+                    {startLocation?.emoji} {startLocation?.name}
+                  </span>
                 </div>
-              )
-            })}
-          </div>
-        )}
+
+                {route.segments.map((seg, idx) => {
+                  const toLoc = locationMap[seg.to]
+                  const tasks = getTasksAtLocation(seg.to)
+                  const via = seg.path.slice(1, -1).map(id => locationMap[id]).filter(Boolean)
+                  const unreachable = seg.time === Infinity || seg.time >= 1e9
+
+                  return (
+                    <div key={idx} className="flex items-start gap-1">
+                      {/* Arrow + time */}
+                      <div className="flex flex-col items-center mx-1 pt-0.5">
+                        <span className="text-[10px]" style={{ color: 'rgba(201,168,76,0.5)' }}>
+                          {unreachable ? '✕' : `→ ${seg.time}분`}
+                        </span>
+                        {via.length > 0 && (
+                          <span className="text-[9px]" style={{ color: 'var(--parchment)', opacity: 0.3 }}>
+                            경유 {via.length}
+                          </span>
+                        )}
+                      </div>
+                      {/* Destination */}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                            style={{
+                              backgroundColor: unreachable ? 'rgba(139,32,32,0.15)' : 'rgba(201,168,76,0.12)',
+                              border: `1.5px solid ${unreachable ? 'var(--crimson)' : 'var(--gold)'}`,
+                              color: unreachable ? 'var(--crimson-light)' : 'var(--gold-dark)'
+                            }}>
+                            {idx + 1}
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--parchment)' }}>
+                            {toLoc?.emoji} {toLoc?.name}
+                          </span>
+                        </div>
+                        {tasks.length > 0 && (
+                          <div className="ml-6 flex flex-wrap gap-x-2">
+                            {tasks.map((task, i) => (
+                              <span key={i} className="text-[10px]" style={{ color: 'var(--parchment)', opacity: 0.55 }}>• {task}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
