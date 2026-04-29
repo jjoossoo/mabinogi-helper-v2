@@ -56,17 +56,26 @@ function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색.
   )
 }
 
-function LocationModal({ location, onClose, onSave }) {
+function LocationModal({ location, allLocations, onClose, onSave }) {
   const [form, setForm] = useState({
     name: location?.name ?? '',
     description: location?.description ?? '',
-    region: location?.region ?? '',
     emoji: location?.emoji ?? '📍',
     sort_order: location?.sort_order ?? 0,
+    parent_id: location?.parent_id ?? '',
   })
   const [error, setError] = useState(null)
   const [isPending, startTransition] = useTransition()
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  // Only top-level locations (no parent) can be parents, excluding self
+  const parentOptions = [
+    { value: '', label: '없음 (독립 지역)' },
+    ...(allLocations ?? [])
+      .filter(l => !l.parent_id && l.id !== location?.id)
+      .map(l => ({ value: l.id, label: l.name, emoji: l.emoji })),
+  ]
+  const selectedParent = (allLocations ?? []).find(l => l.id === form.parent_id)
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -101,15 +110,22 @@ function LocationModal({ location, onClose, onSave }) {
                 className="input-field w-full rounded px-2 py-2 text-center text-lg" />
             </div>
             <div>
-              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>지역명 *</label>
-              <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="예: 티르 코네일"
+              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>위치명 *</label>
+              <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="예: 콜헨 여관"
                 className="input-field w-full rounded px-3 py-2 text-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>지역 구분</label>
-            <input value={form.region} onChange={e => set('region', e.target.value)} placeholder="예: 에린, 이리아"
-              className="input-field w-full rounded px-3 py-2 text-sm" />
+            <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>소속 지역</label>
+            <SearchSelect
+              selectedLabel={selectedParent ? `${selectedParent.emoji} ${selectedParent.name}` : '없음 (독립 지역)'}
+              onSelect={opt => set('parent_id', opt.value)}
+              options={parentOptions}
+              placeholder="상위 지역 검색..."
+            />
+            <p className="mt-1 text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>
+              선택하면 해당 지역의 세부 위치가 됩니다
+            </p>
           </div>
           <div>
             <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>설명</label>
@@ -242,38 +258,71 @@ function LocationsSection({ locations, setLocations }) {
   }
 
   function handleDelete(location) {
-    if (!confirm(`'${location.name}' 지역을 삭제할까요?`)) return
+    if (!confirm(`'${location.name}'을(를) 삭제할까요?`)) return
     startTransition(async () => {
       const result = await deleteLocation(location.id)
       if (!result.error) setLocations(prev => prev.filter(l => l.id !== location.id))
     })
   }
 
+  const locById = Object.fromEntries(locations.map(l => [l.id, l]))
+
+  // Build display order: parent → its children, then next parent → its children
+  const parentMap = {}
+  const topLevel = []
+  for (const loc of locations) {
+    if (loc.parent_id) {
+      if (!parentMap[loc.parent_id]) parentMap[loc.parent_id] = []
+      parentMap[loc.parent_id].push(loc)
+    } else {
+      topLevel.push(loc)
+    }
+  }
+  const rows = []
+  for (const loc of topLevel) {
+    rows.push({ loc, isChild: false })
+    for (const child of (parentMap[loc.id] ?? [])) {
+      rows.push({ loc: child, isChild: true })
+    }
+  }
+  // Orphaned children (parent deleted or missing) at the bottom
+  const knownParentIds = new Set(topLevel.map(l => l.id))
+  for (const loc of locations) {
+    if (loc.parent_id && !knownParentIds.has(loc.parent_id)) {
+      rows.push({ loc, isChild: true })
+    }
+  }
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="px-5 py-3 flex items-center justify-between flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}>
-        <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.6 }}>{locations.length}개 지역</span>
-        <button onClick={() => setModal('add')} className="btn-primary text-xs px-3 py-1.5 rounded">+ 지역 추가</button>
+        <span className="text-sm" style={{ color: 'var(--ink)', opacity: 0.6 }}>{locations.length}개 위치</span>
+        <button onClick={() => setModal('add')} className="btn-primary text-xs px-3 py-1.5 rounded">+ 위치 추가</button>
       </div>
       <div className="flex-1 overflow-y-auto dots-bg">
         <table className="w-full text-sm">
           <thead className="sticky top-0" style={{ backgroundColor: 'var(--parchment-dark)' }}>
             <tr>
-              <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>지역</th>
-              <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>구분</th>
+              <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>위치</th>
+              <th className="text-left px-4 py-2 font-semibold font-serif" style={{ color: 'var(--gold-dark)', borderBottom: '1px solid rgba(138,106,31,0.3)' }}>소속 지역</th>
               <th className="px-4 py-2" style={{ borderBottom: '1px solid rgba(138,106,31,0.3)' }}></th>
             </tr>
           </thead>
           <tbody>
-            {locations.map((loc, idx) => (
+            {rows.map(({ loc, isChild }, idx) => {
+              const parent = loc.parent_id ? locById[loc.parent_id] : null
+              return (
               <tr key={loc.id}
                 style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(138,106,31,0.04)', borderBottom: '1px solid rgba(138,106,31,0.12)' }}>
                 <td className="px-4 py-2.5">
-                  <span className="mr-2">{loc.emoji}</span>
-                  <span style={{ color: 'var(--ink)' }}>{loc.name}</span>
+                  {isChild && <span className="mr-1" style={{ color: 'var(--ink)', opacity: 0.25 }}>└</span>}
+                  <span className={isChild ? 'mr-1.5' : 'mr-2'}>{loc.emoji}</span>
+                  <span style={{ color: 'var(--ink)', opacity: isChild ? 0.8 : 1 }}>{loc.name}</span>
                 </td>
-                <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--ink)', opacity: 0.55 }}>{loc.region || '-'}</td>
+                <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--ink)', opacity: 0.55 }}>
+                  {parent ? `${parent.emoji} ${parent.name}` : '-'}
+                </td>
                 <td className="px-4 py-2.5">
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => setModal(loc)} className="btn-ghost-sm px-2 py-1 rounded text-xs">수정</button>
@@ -281,9 +330,10 @@ function LocationsSection({ locations, setLocations }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              )
+            })}
             {locations.length === 0 && (
-              <tr><td colSpan={3} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink)', opacity: 0.4 }}>등록된 지역이 없습니다</td></tr>
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--ink)', opacity: 0.4 }}>등록된 위치가 없습니다</td></tr>
             )}
           </tbody>
         </table>
@@ -291,6 +341,7 @@ function LocationsSection({ locations, setLocations }) {
       {modal && (
         <LocationModal
           location={modal === 'add' ? null : modal}
+          allLocations={locations}
           onClose={() => setModal(null)}
           onSave={handleSave}
         />

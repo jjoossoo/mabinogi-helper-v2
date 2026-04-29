@@ -3,12 +3,35 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 
 function withAutoLayout(locations) {
-  const cols = Math.ceil(Math.sqrt(Math.max(locations.length, 1)))
-  return locations.map((loc, i) => ({
-    ...loc,
-    x: loc.x ?? 80 + (i % cols) * 180,
-    y: loc.y ?? 80 + Math.floor(i / cols) * 140,
-  }))
+  const parents = locations.filter(l => !l.parent_id)
+  const childrenByParent = {}
+  for (const l of locations) {
+    if (l.parent_id) {
+      if (!childrenByParent[l.parent_id]) childrenByParent[l.parent_id] = []
+      childrenByParent[l.parent_id].push(l)
+    }
+  }
+  const cols = Math.ceil(Math.sqrt(Math.max(parents.length, 1)))
+  const result = []
+  const parentPos = {}
+  parents.forEach((loc, i) => {
+    const x = loc.x ?? 100 + (i % cols) * 220
+    const y = loc.y ?? 100 + Math.floor(i / cols) * 180
+    parentPos[loc.id] = { x, y }
+    result.push({ ...loc, x, y })
+  })
+  for (const [parentId, children] of Object.entries(childrenByParent)) {
+    const p = parentPos[parentId] ?? { x: 100, y: 100 }
+    children.forEach((loc, i) => {
+      const angle = (2 * Math.PI * i) / children.length - Math.PI / 2
+      result.push({
+        ...loc,
+        x: loc.x ?? Math.round(p.x + Math.cos(angle) * 90),
+        y: loc.y ?? Math.round(p.y + Math.sin(angle) * 90),
+      })
+    })
+  }
+  return result
 }
 
 // Scale+translate so all nodes fit the canvas with padding
@@ -63,6 +86,42 @@ function draw(ctx, w, h, nodes, connections, route, startId, destIds) {
   const t = computeTransform(nodes, w, h)
   const nm = Object.fromEntries(nodes.map(n => [n.id, n]))
   const nodeR = Math.max(13, Math.min(24, 24 * t.s))
+  const childR = Math.max(9, Math.min(17, 17 * t.s))
+
+  // Group bubbles for sub-locations
+  const groups = {}
+  for (const n of nodes) {
+    if (n.parent_id) {
+      if (!groups[n.parent_id]) groups[n.parent_id] = []
+      groups[n.parent_id].push(n)
+    }
+  }
+  for (const [parentId, children] of Object.entries(groups)) {
+    if (!children.length) continue
+    const pad = childR + 14
+    const cxs = children.map(n => { const [cx] = px(n.x, n.y, t); return cx })
+    const cys = children.map(n => { const [, cy] = px(n.x, n.y, t); return cy })
+    const x0 = Math.min(...cxs) - pad, x1 = Math.max(...cxs) + pad
+    const y0 = Math.min(...cys) - pad, y1 = Math.max(...cys) + pad
+    ctx.beginPath()
+    ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 16)
+    ctx.fillStyle = 'rgba(201,168,76,0.05)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(201,168,76,0.2)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([5, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
+    const parent = nm[parentId]
+    if (parent) {
+      const fontSize = Math.max(9, Math.min(12, 11 * t.s))
+      ctx.font = `${fontSize}px sans-serif`
+      ctx.fillStyle = 'rgba(201,168,76,0.4)'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(`${parent.emoji} ${parent.name}`, x0 + 7, y0 + 5)
+    }
+  }
 
   // Build set of edges that belong to the route path
   const routeEdgeKey = new Set()
@@ -113,10 +172,12 @@ function draw(ctx, w, h, nodes, connections, route, startId, destIds) {
     const isDest = destIds.includes(node.id)
     const step = stepNum[node.id]
     const active = isStart || isDest
+    const isChild = !!node.parent_id
+    const r = isChild ? childR : nodeR
 
     // Outer glow ring for active nodes
     if (active) {
-      ctx.beginPath(); ctx.arc(cx, cy, nodeR + 7, 0, Math.PI * 2)
+      ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2)
       ctx.fillStyle = isStart ? 'rgba(74,124,95,0.14)' : 'rgba(201,168,76,0.1)'
       ctx.fill()
     }
@@ -125,38 +186,38 @@ function draw(ctx, w, h, nodes, connections, route, startId, destIds) {
     ctx.save()
     ctx.shadowColor = active ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)'
     ctx.shadowBlur = active ? 10 : 5
-    ctx.beginPath(); ctx.arc(cx, cy, nodeR, 0, Math.PI * 2)
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
     ctx.fillStyle = isStart ? 'rgba(18,38,24,0.96)'
       : isDest ? 'rgba(36,28,8,0.96)'
-      : 'rgba(17,12,4,0.65)'
+      : isChild ? 'rgba(17,12,4,0.55)' : 'rgba(17,12,4,0.65)'
     ctx.fill()
-    ctx.strokeStyle = isStart ? '#4a7c5f' : isDest ? '#c9a84c' : 'rgba(201,168,76,0.18)'
+    ctx.strokeStyle = isStart ? '#4a7c5f' : isDest ? '#c9a84c' : isChild ? 'rgba(201,168,76,0.12)' : 'rgba(201,168,76,0.18)'
     ctx.lineWidth = active ? 2 : 1
     ctx.stroke()
     ctx.restore()
 
     // Emoji
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.globalAlpha = active ? 1 : 0.35
-    ctx.font = `${Math.max(10, nodeR * 0.6)}px sans-serif`
-    ctx.fillText(node.emoji || '📍', cx, cy - nodeR * 0.18)
+    ctx.globalAlpha = active ? 1 : isChild ? 0.25 : 0.35
+    ctx.font = `${Math.max(8, r * 0.6)}px sans-serif`
+    ctx.fillText(node.emoji || '📍', cx, cy - r * 0.18)
     ctx.globalAlpha = 1
 
     // Name tag
-    if (active || nodeR >= 18) {
+    if (active || (!isChild && r >= 18)) {
       const label = node.name.length > 7 ? node.name.slice(0, 6) + '…' : node.name
-      ctx.font = `${active ? 'bold ' : ''}${Math.max(9, nodeR * 0.43)}px sans-serif`
+      ctx.font = `${active ? 'bold ' : ''}${Math.max(8, r * 0.43)}px sans-serif`
       ctx.fillStyle = isStart ? 'rgba(106,172,143,0.9)' : isDest ? 'rgba(201,168,76,0.88)' : 'rgba(245,237,214,0.22)'
-      ctx.fillText(label, cx, cy + nodeR + Math.max(8, nodeR * 0.42))
+      ctx.fillText(label, cx, cy + r + Math.max(7, r * 0.42))
     }
 
     // Badge (step number or 출발)
     if (step || isStart) {
-      const br = Math.max(9, nodeR * 0.43)
-      const bx2 = cx + nodeR * 0.68, by2 = cy - nodeR * 0.68
+      const br = Math.max(8, r * 0.45)
+      const bx2 = cx + r * 0.68, by2 = cy - r * 0.68
       ctx.beginPath(); ctx.arc(bx2, by2, br, 0, Math.PI * 2)
       ctx.fillStyle = isStart ? '#3d7a5c' : '#c9a84c'; ctx.fill()
-      ctx.font = `bold ${Math.max(8, br * 0.95)}px sans-serif`
+      ctx.font = `bold ${Math.max(7, br * 0.95)}px sans-serif`
       ctx.fillStyle = isStart ? '#d4f0e3' : '#110c04'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.fillText(isStart ? '출' : String(step), bx2, by2)

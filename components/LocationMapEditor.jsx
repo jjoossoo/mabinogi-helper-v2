@@ -4,22 +4,52 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { addConnection, deleteConnection, updateLocationPositions } from '@/app/actions/locations'
 
 const NODE_R = 26
+const CHILD_R = 18
 const CANVAS_W = 1800
 const CANVAS_H = 960
 const LABEL_MAX = 9
 
 function autoLayout(locations) {
-  const cols = Math.ceil(Math.sqrt(Math.max(locations.length, 1)))
-  return locations.map((loc, i) => ({
-    ...loc,
-    x: loc.x ?? 80 + (i % cols) * 180,
-    y: loc.y ?? 80 + Math.floor(i / cols) * 140,
-  }))
+  const parents = locations.filter(l => !l.parent_id)
+  const childrenByParent = {}
+  for (const l of locations) {
+    if (l.parent_id) {
+      if (!childrenByParent[l.parent_id]) childrenByParent[l.parent_id] = []
+      childrenByParent[l.parent_id].push(l)
+    }
+  }
+
+  const cols = Math.ceil(Math.sqrt(Math.max(parents.length, 1)))
+  const result = []
+  const parentPos = {}
+
+  parents.forEach((loc, i) => {
+    const x = loc.x ?? 140 + (i % cols) * 300
+    const y = loc.y ?? 140 + Math.floor(i / cols) * 260
+    parentPos[loc.id] = { x, y }
+    result.push({ ...loc, x, y })
+  })
+
+  for (const [parentId, children] of Object.entries(childrenByParent)) {
+    const p = parentPos[parentId] ?? { x: 140, y: 140 }
+    children.forEach((loc, i) => {
+      const angle = (2 * Math.PI * i) / children.length - Math.PI / 2
+      const r = 100
+      result.push({
+        ...loc,
+        x: loc.x ?? Math.round(p.x + Math.cos(angle) * r),
+        y: loc.y ?? Math.round(p.y + Math.sin(angle) * r),
+      })
+    })
+  }
+
+  return result
 }
 
 function getNodeAt(nodes, x, y) {
   for (let i = nodes.length - 1; i >= 0; i--) {
-    if (Math.hypot(x - nodes[i].x, y - nodes[i].y) <= NODE_R) return nodes[i]
+    const r = nodes[i].parent_id ? CHILD_R : NODE_R
+    if (Math.hypot(x - nodes[i].x, y - nodes[i].y) <= r) return nodes[i]
   }
   return null
 }
@@ -39,6 +69,43 @@ function getEdgeAt(edges, nodeMap, x, y) {
   return null
 }
 
+function drawGroupBubbles(ctx, nodes) {
+  const nm = Object.fromEntries(nodes.map(n => [n.id, n]))
+  const groups = {}
+  for (const n of nodes) {
+    if (n.parent_id) {
+      if (!groups[n.parent_id]) groups[n.parent_id] = []
+      groups[n.parent_id].push(n)
+    }
+  }
+  for (const [parentId, children] of Object.entries(groups)) {
+    if (!children.length) continue
+    const pad = CHILD_R + 22
+    const xs = children.map(n => n.x)
+    const ys = children.map(n => n.y)
+    const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad
+    const y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad
+    ctx.beginPath()
+    ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 24)
+    ctx.fillStyle = 'rgba(201,168,76,0.05)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(201,168,76,0.22)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([7, 5])
+    ctx.stroke()
+    ctx.setLineDash([])
+    // Parent label
+    const parent = nm[parentId]
+    if (parent) {
+      ctx.font = '11px sans-serif'
+      ctx.fillStyle = 'rgba(201,168,76,0.45)'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(`${parent.emoji} ${parent.name}`, x0 + 9, y0 + 7)
+    }
+  }
+}
+
 function drawScene(ctx, nodes, edges, mode, connectFirstId, hoveredId, hoveredEdgeId, previewLine) {
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
 
@@ -55,6 +122,9 @@ function drawScene(ctx, nodes, edges, mode, connectFirstId, hoveredId, hoveredEd
       ctx.fill()
     }
   }
+
+  // Region group bubbles (drawn before edges and nodes)
+  drawGroupBubbles(ctx, nodes)
 
   const nm = Object.fromEntries(nodes.map(n => [n.id, n]))
 
@@ -108,12 +178,14 @@ function drawScene(ctx, nodes, edges, mode, connectFirstId, hoveredId, hoveredEd
   for (const node of nodes) {
     const isSel = node.id === connectFirstId
     const isHov = node.id === hoveredId
+    const isChild = !!node.parent_id
+    const r = isChild ? CHILD_R : NODE_R
     const cx = node.x, cy = node.y
 
     // Selection ring
     if (isSel) {
       ctx.beginPath()
-      ctx.arc(cx, cy, NODE_R + 8, 0, Math.PI * 2)
+      ctx.arc(cx, cy, r + 8, 0, Math.PI * 2)
       ctx.fillStyle = 'rgba(201,168,76,0.12)'
       ctx.fill()
     }
@@ -125,27 +197,29 @@ function drawScene(ctx, nodes, edges, mode, connectFirstId, hoveredId, hoveredEd
 
     // Circle body
     ctx.beginPath()
-    ctx.arc(cx, cy, NODE_R, 0, Math.PI * 2)
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
     ctx.fillStyle = isSel
       ? 'rgba(60,44,12,0.95)'
-      : isHov ? 'rgba(30,22,8,0.97)' : 'rgba(17,12,4,0.92)'
+      : isHov ? 'rgba(30,22,8,0.97)' : isChild ? 'rgba(20,15,5,0.88)' : 'rgba(17,12,4,0.92)'
     ctx.fill()
-    ctx.strokeStyle = isSel ? '#c9a84c' : isHov ? 'rgba(245,237,214,0.65)' : 'rgba(201,168,76,0.4)'
+    ctx.strokeStyle = isSel ? '#c9a84c' : isHov ? 'rgba(245,237,214,0.65)' : isChild ? 'rgba(201,168,76,0.28)' : 'rgba(201,168,76,0.4)'
     ctx.lineWidth = isSel ? 2.5 : isHov ? 2 : 1.5
     ctx.stroke()
     ctx.restore()
 
     // Emoji
-    ctx.font = '15px sans-serif'
+    ctx.font = `${isChild ? 11 : 15}px sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(node.emoji || '📍', cx, cy - 4)
+    ctx.globalAlpha = isChild ? 0.75 : 1
+    ctx.fillText(node.emoji || '📍', cx, cy - (isChild ? 3 : 4))
+    ctx.globalAlpha = 1
 
     // Name label below node
     const name = node.name.length > LABEL_MAX ? node.name.slice(0, LABEL_MAX - 1) + '…' : node.name
-    ctx.font = `${isSel ? 'bold ' : ''}10px sans-serif`
-    ctx.fillStyle = isSel ? '#c9a84c' : 'rgba(245,237,214,0.75)'
-    ctx.fillText(name, cx, cy + NODE_R + 10)
+    ctx.font = `${isSel ? 'bold ' : ''}${isChild ? 9 : 10}px sans-serif`
+    ctx.fillStyle = isSel ? '#c9a84c' : isChild ? 'rgba(245,237,214,0.55)' : 'rgba(245,237,214,0.75)'
+    ctx.fillText(name, cx, cy + r + 9)
   }
 }
 
@@ -154,10 +228,10 @@ export default function LocationMapEditor({ initialLocations, initialConnections
   const [edges, setEdges] = useState(initialConnections)
   const [mode, setMode] = useState('move')
   const [connectFirstId, setConnectFirstId] = useState(null)
+  const [pendingConn, setPendingConn] = useState(null) // { aId, bId, time }
   const [hoveredId, setHoveredId] = useState(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState(null)
   const [previewLine, setPreviewLine] = useState(null)
-  const [scale, setScale] = useState(20)
   const [dirty, setDirty] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
   const [toast, setToast] = useState(null)
@@ -228,7 +302,7 @@ export default function LocationMapEditor({ initialLocations, initialConnections
       if (node.id === connectFirstId) {
         setConnectFirstId(null); setPreviewLine(null); return
       }
-      // Create connection
+      // Show confirmation panel instead of saving immediately
       const a = nm[connectFirstId], b = node
       const already = edges.some(ed =>
         (ed.location_a_id === a.id && ed.location_b_id === b.id) ||
@@ -238,15 +312,8 @@ export default function LocationMapEditor({ initialLocations, initialConnections
         showToast('이미 연결된 지역입니다')
         setConnectFirstId(null); setPreviewLine(null); return
       }
-      const dist = Math.hypot(b.x - a.x, b.y - a.y)
-      const travel_time = Math.max(1, Math.round(dist / scale))
       setConnectFirstId(null); setPreviewLine(null)
-      startTransition(async () => {
-        const result = await addConnection({ location_a_id: a.id, location_b_id: b.id, travel_time })
-        if (result.error) { showToast(result.error, true); return }
-        setEdges(prev => [...prev, result.connection])
-        showToast(`${a.name} ↔ ${b.name} 연결 (${travel_time}분)`)
-      })
+      setPendingConn({ aId: a.id, bId: b.id, time: 1 })
     } else if (mode === 'delete-edge') {
       const edge = getEdgeAt(edges, nm, x, y)
       if (edge) {
@@ -317,19 +384,35 @@ export default function LocationMapEditor({ initialLocations, initialConnections
   function changeMode(m) {
     setMode(m)
     setConnectFirstId(null)
+    setPendingConn(null)
     setPreviewLine(null)
     setHoveredEdgeId(null)
+  }
+
+  function confirmConnection() {
+    const nodes = nodesRef.current
+    const nm = Object.fromEntries(nodes.map(n => [n.id, n]))
+    const a = nm[pendingConn.aId], b = nm[pendingConn.bId]
+    const travel_time = Math.max(1, pendingConn.time)
+    setPendingConn(null)
+    startTransition(async () => {
+      const result = await addConnection({ location_a_id: a.id, location_b_id: b.id, travel_time })
+      if (result.error) { showToast(result.error, true); return }
+      setEdges(prev => [...prev, result.connection])
+      showToast(`${a.name} ↔ ${b.name} 연결 (${travel_time}분)`)
+    })
   }
 
   const cursorMap = { move: 'grab', connect: 'crosshair', 'delete-edge': 'default' }
 
   const instruction = {
     move: '노드를 드래그해 위치를 조정하고 [위치 저장]으로 확정하세요',
-    connect: connectFirstId
-      ? `두 번째 지역을 클릭 — 픽셀 거리 ÷ ${scale} = 이동 시간(분)`
-      : '연결할 첫 번째 지역을 클릭하세요',
+    connect: connectFirstId ? '두 번째 지역을 클릭하세요' : '연결할 첫 번째 지역을 클릭하세요',
     'delete-edge': '삭제할 연결선을 클릭하세요',
   }[mode]
+
+  const pendingA = pendingConn ? nodesRef.current.find(n => n.id === pendingConn.aId) : null
+  const pendingB = pendingConn ? nodesRef.current.find(n => n.id === pendingConn.bId) : null
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -365,22 +448,6 @@ export default function LocationMapEditor({ initialLocations, initialConnections
           ))}
         </div>
 
-        {/* Scale */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs flex-shrink-0" style={{ color: 'var(--parchment)', opacity: 0.55 }}>
-            px/분
-          </label>
-          <input
-            type="number"
-            value={scale}
-            min={1}
-            max={500}
-            onChange={e => setScale(Math.max(1, parseInt(e.target.value) || 1))}
-            onFocus={e => e.target.select()}
-            className="input-field w-14 rounded px-2 py-1 text-xs text-center"
-          />
-        </div>
-
         <div className="flex-1" />
 
         {/* Stat badges */}
@@ -411,7 +478,7 @@ export default function LocationMapEditor({ initialLocations, initialConnections
       </div>
 
       {/* Canvas container */}
-      <div className="flex-1 overflow-auto" style={{ backgroundColor: '#0a0702' }}>
+      <div className="flex-1 overflow-auto relative" style={{ backgroundColor: '#0a0702' }}>
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
@@ -428,6 +495,48 @@ export default function LocationMapEditor({ initialLocations, initialConnections
           onMouseLeave={handleMouseLeave}
         />
       </div>
+
+      {/* Connection confirmation panel */}
+      {pendingConn && pendingA && pendingB && (
+        <div
+          className="absolute inset-0 flex items-center justify-center z-10"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <div
+            className="panel dots-bg rounded-xl px-6 py-5 flex flex-col gap-4 shadow-2xl"
+            style={{ minWidth: '280px', border: '1.5px solid rgba(201,168,76,0.5)' }}
+          >
+            <p className="font-serif font-semibold text-sm text-center" style={{ color: 'var(--gold-dark)' }}>
+              ⟷ 연결 추가
+            </p>
+            <p className="text-sm text-center" style={{ color: 'var(--parchment)' }}>
+              {pendingA.emoji} {pendingA.name}
+              <span className="mx-2" style={{ opacity: 0.4 }}>↔</span>
+              {pendingB.emoji} {pendingB.name}
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <label className="text-xs" style={{ color: 'var(--ink)' }}>이동 시간</label>
+              <input
+                type="number"
+                value={pendingConn.time}
+                min={1}
+                autoFocus
+                onChange={e => setPendingConn(p => ({ ...p, time: parseInt(e.target.value) || 1 }))}
+                onKeyDown={e => { if (e.key === 'Enter') confirmConnection(); if (e.key === 'Escape') setPendingConn(null) }}
+                onFocus={e => e.target.select()}
+                className="input-field w-20 rounded px-2 py-1.5 text-sm text-center"
+              />
+              <span className="text-xs" style={{ color: 'var(--ink)', opacity: 0.6 }}>분</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setPendingConn(null)}
+                className="btn-danger flex-1 py-2 rounded text-sm">취소</button>
+              <button onClick={confirmConnection}
+                className="btn-primary flex-1 py-2 rounded text-sm">연결</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Empty state overlay */}
       {nodes.length === 0 && (

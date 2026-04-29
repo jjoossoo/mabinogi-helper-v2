@@ -70,6 +70,15 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
   const selectedChar = initialCharacters.find(c => c.id === selectedCharId)
 
   const locationMap = useMemo(() => Object.fromEntries(locations.map(l => [l.id, l])), [locations])
+
+  function locLabel(locId) {
+    const loc = locationMap[locId]
+    if (!loc) return ''
+    const parent = loc.parent_id ? locationMap[loc.parent_id] : null
+    return parent
+      ? `${parent.emoji} ${parent.name} · ${loc.emoji} ${loc.name}`
+      : `${loc.emoji} ${loc.name}`
+  }
   const tradesMap = useMemo(() => Object.fromEntries(trades.map(t => [t.id, t])), [trades])
   const dungeonsMap = useMemo(() => Object.fromEntries(dungeons.map(d => [d.id, d])), [dungeons])
   const graph = useMemo(() => buildGraph(connections), [connections])
@@ -216,7 +225,7 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
                       className="w-3.5 h-3.5 flex-shrink-0"
                     />
                     <span className="text-xs leading-snug" style={{ color: 'var(--parchment)' }}>
-                      <span style={{ opacity: 0.45 }}>{t.location_info?.emoji} {t.location_info?.name} · </span>
+                      <span style={{ opacity: 0.45 }}>{locLabel(t.location_info?.id)} · </span>
                       {t.npc_name}: {t.give_item?.emoji} {t.give_item?.name}
                     </span>
                   </label>
@@ -245,7 +254,7 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
                       className="w-3.5 h-3.5 flex-shrink-0"
                     />
                     <span className="text-xs leading-snug" style={{ color: 'var(--parchment)' }}>
-                      <span style={{ opacity: 0.45 }}>{d.location?.emoji} {d.location?.name} · </span>
+                      <span style={{ opacity: 0.45 }}>{locLabel(d.location?.id)} · </span>
                       {d.emoji} {d.name}
                     </span>
                   </label>
@@ -346,7 +355,7 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
                     출
                   </div>
                   <span className="text-xs" style={{ color: 'var(--parchment)' }}>
-                    {startLocation?.emoji} {startLocation?.name}
+                    {locLabel(startLocationId)}
                   </span>
                 </div>
 
@@ -381,7 +390,7 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
                             {idx + 1}
                           </div>
                           <span className="text-xs" style={{ color: 'var(--parchment)' }}>
-                            {toLoc?.emoji} {toLoc?.name}
+                            {locLabel(seg.to)}
                           </span>
                         </div>
                         {tasks.length > 0 && (

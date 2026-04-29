@@ -60,6 +60,84 @@ function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색.
   )
 }
 
+// 재료 검색 + 없으면 바로 추가
+function MaterialSearchSelect({ selectedLabel, onSelect, options, placeholder, className, onCreateNew }) {
+  const [editing, setEditing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [creating, setCreating] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const fn = e => { if (!ref.current?.contains(e.target)) { setEditing(false); setQuery('') } }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [])
+
+  const trimmed = query.trim()
+  const filtered = (trimmed
+    ? options.filter(o => o.label.toLowerCase().includes(trimmed.toLowerCase()))
+    : options
+  ).slice(0, 12)
+  const showCreate = trimmed.length > 0 && !options.some(o => o.label.toLowerCase() === trimmed.toLowerCase())
+
+  async function handleCreate() {
+    setCreating(true)
+    const newItem = await onCreateNew(trimmed)
+    setCreating(false)
+    if (newItem) {
+      onSelect({ value: newItem.id, label: newItem.name, emoji: newItem.emoji })
+      setEditing(false)
+      setQuery('')
+    }
+  }
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <input
+        value={editing ? query : (selectedLabel ?? '')}
+        onChange={e => setQuery(e.target.value)}
+        onFocus={() => { setEditing(true); setQuery('') }}
+        onKeyDown={e => e.key === 'Escape' && (setEditing(false), setQuery(''))}
+        placeholder={placeholder}
+        className="input-field w-full rounded px-3 py-2 text-sm"
+      />
+      {editing && (
+        <ul className="absolute z-20 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded shadow-xl"
+          style={{ backgroundColor: 'var(--panel-bg)', border: '1.5px solid var(--gold)' }}>
+          {filtered.map(opt => (
+            <li key={opt.value}>
+              <button type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { onSelect(opt); setEditing(false); setQuery('') }}
+                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors hover:bg-[rgba(201,168,76,0.1)]"
+                style={{ color: 'var(--ink)', borderBottom: '1px solid rgba(138,106,31,0.1)' }}>
+                {opt.emoji && <span>{opt.emoji}</span>}
+                <span>{opt.label}</span>
+              </button>
+            </li>
+          ))}
+          {filtered.length === 0 && !showCreate && (
+            <li className="px-3 py-2 text-xs" style={{ color: 'var(--ink)', opacity: 0.4 }}>검색 결과 없음</li>
+          )}
+          {showCreate && (
+            <li>
+              <button type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={handleCreate}
+                disabled={creating}
+                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors hover:bg-[rgba(74,124,95,0.12)]"
+                style={{ color: 'var(--sage)', borderTop: filtered.length > 0 ? '1px solid rgba(138,106,31,0.2)' : 'none', opacity: creating ? 0.6 : 1 }}>
+                <span>+</span>
+                <span>{creating ? '추가 중...' : `"${trimmed}" 새로 등록`}</span>
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 // 아이템명 자동완성 — 자유 입력이되 기존 아이템 제안
 function NameAutocomplete({ value, onChange, onSelect, items, excludeId }) {
   const [open, setOpen] = useState(false)
@@ -110,7 +188,7 @@ function NameAutocomplete({ value, onChange, onSelect, items, excludeId }) {
   )
 }
 
-function ItemModal({ item, categories, items, locations, onClose, onSave }) {
+function ItemModal({ item, categories, items, locations, onClose, onSave, onAddItem }) {
   const [form, setForm] = useState(() => item ? {
     name: item.name,
     category_id: item.category_id ?? '',
@@ -131,6 +209,13 @@ function ItemModal({ item, categories, items, locations, onClose, onSave }) {
     set('materials', form.materials.map((m, idx) => idx === i ? { ...m, [k]: v } : m))
   }
   function removeMaterial(i) { set('materials', form.materials.filter((_, idx) => idx !== i)) }
+
+  async function handleCreateMaterial(name) {
+    const result = await addItem({ name, emoji: '📦', category_id: null, description: '', craft_output: null, materials: [], location_id: null })
+    if (result.error || !result.item) return null
+    onAddItem(result.item)
+    return result.item
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -258,12 +343,13 @@ function ItemModal({ item, categories, items, locations, onClose, onSave }) {
                     const selectedMat = items.find(it => it.id === mat.material_id)
                     return (
                       <div key={i} className="flex gap-2 items-center">
-                        <SearchSelect
+                        <MaterialSearchSelect
                           selectedLabel={selectedMat ? `${selectedMat.emoji} ${selectedMat.name}` : ''}
                           onSelect={opt => updateMaterial(i, 'material_id', opt.value)}
                           options={materialOptions}
                           placeholder="재료 검색..."
                           className="flex-1"
+                          onCreateNew={handleCreateMaterial}
                         />
                         <input type="number" value={mat.amount} min={1}
                           onChange={e => updateMaterial(i, 'amount', parseInt(e.target.value) || 1)}
@@ -494,6 +580,7 @@ export default function ItemsTab({ categories, setCategories, items, setItems, l
           locations={locations ?? []}
           onClose={() => setModal(null)}
           onSave={handleSaveItem}
+          onAddItem={item => setItems(prev => [...prev, item])}
         />
       )}
     </div>

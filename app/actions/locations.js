@@ -17,10 +17,10 @@ const DUNGEON_SELECT = '*, location:location_id(id, name, emoji)'
 export async function addLocation(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, description, region, emoji, sort_order } = data
+  const { name, description, region, emoji, sort_order, parent_id } = data
   const { data: location, error } = await db
     .from('locations')
-    .insert({ name, description: description ?? '', region: region ?? '', emoji: emoji || '📍', sort_order: sort_order ?? 0 })
+    .insert({ name, description: description ?? '', region: region ?? '', emoji: emoji || '📍', sort_order: sort_order ?? 0, parent_id: parent_id || null })
     .select().single()
   if (error) return { error: error.message }
   return { location }
@@ -29,10 +29,10 @@ export async function addLocation(data) {
 export async function updateLocation(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, description, region, emoji, sort_order } = data
+  const { name, description, region, emoji, sort_order, parent_id } = data
   const { data: location, error } = await db
     .from('locations')
-    .update({ name, description: description ?? '', region: region ?? '', emoji: emoji || '📍', sort_order: sort_order ?? 0 })
+    .update({ name, description: description ?? '', region: region ?? '', emoji: emoji || '📍', sort_order: sort_order ?? 0, parent_id: parent_id || null })
     .eq('id', id).select().single()
   if (error) return { error: error.message }
   return { location }
