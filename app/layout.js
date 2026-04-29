@@ -26,13 +26,22 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
         <header className="relative flex-shrink-0" style={{ backgroundColor: 'var(--deep)' }}>
           <div className="max-w-5xl mx-auto flex items-center justify-between px-5 py-3.5">
-            <Link
-              href="/"
-              className="font-bold tracking-wider hover:opacity-80 transition-opacity text-lg font-serif"
-              style={{ color: 'var(--gold)' }}
-            >
-              ⚔ 마비노기 숙제 도우미
-            </Link>
+            <div className="flex items-center gap-5">
+              <Link
+                href="/"
+                className="font-bold tracking-wider hover:opacity-80 transition-opacity text-lg font-serif"
+                style={{ color: 'var(--gold)' }}
+              >
+                ⚔ 마비노기 숙제 도우미
+              </Link>
+              <Link
+                href="/route-planner"
+                className="text-sm hover:opacity-80 transition-opacity hidden sm:inline"
+                style={{ color: 'var(--gold-dark)' }}
+              >
+                🗺 경로 계산
+              </Link>
+            </div>
             <AuthButton />
           </div>
           <div

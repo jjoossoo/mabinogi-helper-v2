@@ -6,16 +6,18 @@ import QuestsTab from './QuestsTab'
 import MembersTab from './MembersTab'
 import TradesTab from './TradesTab'
 import ContentsTab from './ContentsTab'
+import LocationsTab from './LocationsTab'
 
 const TABS = [
   { id: 'items', label: '아이템 관리' },
   { id: 'quests', label: '퀘스트/미션 관리' },
   { id: 'trades', label: '물물교환 관리' },
   { id: 'contents', label: '콘텐츠 관리' },
+  { id: 'locations', label: '위치 관리' },
   { id: 'members', label: '회원 관리' },
 ]
 
-export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades, initialContents }) {
+export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades, initialContents, initialLocations, initialConnections, initialDungeons }) {
   const [activeTab, setActiveTab] = useState('items')
   const [categories, setCategories] = useState(initialCategories)
   const [items, setItems] = useState(initialItems)
@@ -23,6 +25,9 @@ export default function AdminView({ initialCategories, initialItems, initialQues
   const [members, setMembers] = useState(initialMembers)
   const [trades, setTrades] = useState(initialTrades)
   const [contents, setContents] = useState(initialContents)
+  const [locations, setLocations] = useState(initialLocations)
+  const [connections, setConnections] = useState(initialConnections)
+  const [dungeons, setDungeons] = useState(initialDungeons)
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -64,6 +69,7 @@ export default function AdminView({ initialCategories, initialItems, initialQues
           <ItemsTab
             categories={categories} setCategories={setCategories}
             items={items} setItems={setItems}
+            locations={locations}
           />
         )}
         {activeTab === 'quests' && (
@@ -73,10 +79,17 @@ export default function AdminView({ initialCategories, initialItems, initialQues
           />
         )}
         {activeTab === 'trades' && (
-          <TradesTab trades={trades} setTrades={setTrades} items={items} />
+          <TradesTab trades={trades} setTrades={setTrades} items={items} locations={locations} />
         )}
         {activeTab === 'contents' && (
           <ContentsTab contents={contents} setContents={setContents} items={items} />
+        )}
+        {activeTab === 'locations' && (
+          <LocationsTab
+            locations={locations} setLocations={setLocations}
+            connections={connections} setConnections={setConnections}
+            dungeons={dungeons} setDungeons={setDungeons}
+          />
         )}
         {activeTab === 'members' && (
           <MembersTab members={members} setMembers={setMembers} />

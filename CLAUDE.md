@@ -105,3 +105,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon 공개 키
 - `content_progress`: `{ value, completed_at, updated_at }`
 - 관리자: `components/admin/ContentsTab.jsx` / `app/actions/contents.js`
 - 유저 탭: `components/tabs/ContentsPanel.jsx`
+
+### 위치 관리 / 최적 경로 계산
+- `locations` 테이블: 지역 정보 (name, emoji, region, sort_order)
+- `location_connections` 테이블: 지역 간 연결 (location_a_id, location_b_id, travel_time 분)
+- `dungeons` 테이블: 던전/필드보스 (name, emoji, location_id FK, dungeon_type: 'dungeon'|'field_boss')
+- `items.location_id` FK: 아이템 획득 위치
+- `trades.location_id` FK: NPC 위치 (경로 계산용) — 기존 text `location` 필드와 별개
+  - 관리자 UI에서 `location_info:location_id(...)` alias로 조회 (text `location` 컬럼과 이름 충돌 방지)
+- 관리자: `components/admin/LocationsTab.jsx` (지역/연결/던전 서브탭) / `app/actions/locations.js`
+- 경로 계산: `lib/routeCalculator.js` — `buildGraph(connections)` + `calculateRoute(graph, startId, destIds)` (Dijkstra + greedy nearest-neighbor TSP)
+- 유저 페이지: `app/route-planner/page.js` (서버) + `components/RoutePlannerView.jsx` (클라이언트)
+  - 오늘의 미완료 trades(location_id 있는 것) 자동 로드 + 던전/수동 목적지 추가
+  - 경로 결과: 각 목적지별 이동시간, 경유지, 해야 할 교환/던전 표시

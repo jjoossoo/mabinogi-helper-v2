@@ -30,14 +30,16 @@ export async function deleteCategory(id) {
 }
 
 // ── 아이템 ──────────────────────────────────────────────
+const ITEM_SELECT = '*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount), location:location_id(id, name, emoji)'
+
 export async function addItem(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, category_id, emoji, description, craft_output, materials } = data
+  const { name, category_id, emoji, description, craft_output, materials, location_id } = data
 
   const { data: item, error } = await db
     .from('items')
-    .insert({ name, category_id: category_id || null, emoji, description, craft_output: craft_output || null })
+    .insert({ name, category_id: category_id || null, emoji, description, craft_output: craft_output || null, location_id: location_id || null })
     .select().single()
   if (error) return { error: error.message }
 
@@ -49,9 +51,7 @@ export async function addItem(data) {
   }
 
   const { data: full, error: fetchError } = await db
-    .from('items')
-    .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
-    .eq('id', item.id).single()
+    .from('items').select(ITEM_SELECT).eq('id', item.id).single()
 
   revalidatePath('/admin')
   if (fetchError) return { error: fetchError.message }
@@ -61,11 +61,11 @@ export async function addItem(data) {
 export async function updateItem(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { name, category_id, emoji, description, craft_output, materials } = data
+  const { name, category_id, emoji, description, craft_output, materials, location_id } = data
 
   const { error } = await db
     .from('items')
-    .update({ name, category_id: category_id || null, emoji, description, craft_output: craft_output || null })
+    .update({ name, category_id: category_id || null, emoji, description, craft_output: craft_output || null, location_id: location_id || null })
     .eq('id', id)
   if (error) return { error: error.message }
 
@@ -77,9 +77,7 @@ export async function updateItem(id, data) {
   }
 
   const { data: full, error: fetchError } = await db
-    .from('items')
-    .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
-    .eq('id', id).single()
+    .from('items').select(ITEM_SELECT).eq('id', id).single()
   if (fetchError) return { error: fetchError.message }
   return { item: full }
 }

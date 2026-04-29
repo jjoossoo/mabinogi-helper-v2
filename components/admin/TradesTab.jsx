@@ -104,10 +104,11 @@ function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색.
   )
 }
 
-function TradeModal({ trade, items, trades, onSave, onClose }) {
+function TradeModal({ trade, items, trades, locations, onSave, onClose }) {
   const [form, setForm] = useState({
     npc_name: trade?.npc_name ?? '',
     location: trade?.location ?? '',
+    location_id: trade?.location_info?.id ?? '',
     give_item_id: trade?.give_item?.id ?? '',
     give_amount: trade?.give_amount ?? 1,
     receive_item_id: trade?.receive_item?.id ?? '',
@@ -135,6 +136,12 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
   const locationSuggestions = [...new Set(trades.map(t => t.location).filter(Boolean))].map(loc => ({
     value: loc, label: loc,
   }))
+
+  const locationOptions = [
+    { value: '', label: '미지정' },
+    ...(locations ?? []).map(l => ({ value: l.id, label: l.name, emoji: l.emoji })),
+  ]
+  const selectedLocationInfo = (locations ?? []).find(l => l.id === form.location_id)
 
   const itemOptions = items.map(i => ({ value: i.id, label: i.name, emoji: i.emoji }))
   const giveItem = items.find(i => i.id === form.give_item_id)
@@ -191,7 +198,7 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>위치</label>
+              <label className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>위치 (텍스트)</label>
               <AutocompleteInput
                 value={form.location}
                 onChange={v => set('location', v)}
@@ -200,6 +207,16 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
                 placeholder="예: 티르 코네일"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>경로 계산 위치</label>
+            <SearchSelect
+              selectedLabel={selectedLocationInfo ? `${selectedLocationInfo.emoji} ${selectedLocationInfo.name}` : '미지정'}
+              onSelect={opt => set('location_id', opt.value)}
+              options={locationOptions}
+              placeholder="위치 검색..."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -276,7 +293,7 @@ function TradeModal({ trade, items, trades, onSave, onClose }) {
   )
 }
 
-export default function TradesTab({ trades, setTrades, items }) {
+export default function TradesTab({ trades, setTrades, items, locations }) {
   const [modal, setModal] = useState(null)
   const [, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState(null)
@@ -383,6 +400,7 @@ export default function TradesTab({ trades, setTrades, items }) {
           trade={modal === 'add' ? null : modal}
           items={items}
           trades={trades}
+          locations={locations ?? []}
           onSave={handleSave}
           onClose={() => setModal(null)}
         />

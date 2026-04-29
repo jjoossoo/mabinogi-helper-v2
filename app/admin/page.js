@@ -14,27 +14,33 @@ export default async function AdminPage() {
   const admin = createAdminClient()
 
   const [
-    { data: categories, error: catErr },
-    { data: items, error: itemsErr },
-    { data: quests, error: questsErr },
-    { data: profiles, error: profilesErr },
+    { data: categories },
+    { data: items },
+    { data: quests },
+    { data: profiles },
     { data: trades },
     { data: contentsData },
+    { data: locations },
+    { data: connections },
+    { data: dungeons },
   ] = await Promise.all([
     admin.from('item_categories').select('*').order('name'),
     admin.from('items')
-      .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount)')
+      .select('*, item_categories(id, name), recipes!recipes_item_id_fkey(material_id, amount), location:location_id(id, name, emoji)')
       .order('name'),
     admin.from('quests')
       .select('*, quest_conditions(id, name, type, max_value, sort_order), quest_rewards(id, item_id, amount, items(name, emoji)), quest_sections(id, name, sort_order, quest_section_missions(id, name, sort_order, quest_mission_conditions(id, name, type, max_value, sort_order), quest_mission_rewards(id, item_id, amount, items(name, emoji))))')
       .order('name'),
     admin.from('profiles').select('user_id, role, created_at'),
     admin.from('trades')
-      .select('*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji)')
+      .select('*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji), location_info:location_id(id, name, emoji)')
       .order('npc_name'),
     admin.from('contents')
       .select('*, content_conditions(id, name, type, max_value, sort_order), content_rewards(id, item_id, amount, items(name, emoji))')
       .order('sort_order').order('name'),
+    admin.from('locations').select('*').order('sort_order').order('name'),
+    admin.from('location_connections').select('*, location_a:location_a_id(id, name, emoji), location_b:location_b_id(id, name, emoji)'),
+    admin.from('dungeons').select('*, location:location_id(id, name, emoji)').order('sort_order').order('name'),
   ])
   const { data: { users } } = await admin.auth.admin.listUsers()
   const roleMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p]))
@@ -53,6 +59,9 @@ export default async function AdminPage() {
       initialMembers={members}
       initialTrades={trades ?? []}
       initialContents={contentsData ?? []}
+      initialLocations={locations ?? []}
+      initialConnections={connections ?? []}
+      initialDungeons={dungeons ?? []}
     />
   )
 }

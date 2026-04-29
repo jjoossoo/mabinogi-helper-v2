@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { addCategory, deleteCategory, addItem, updateItem, deleteItem } from '@/app/actions/admin'
 
-const EMPTY_FORM = { name: '', category_id: '', emoji: '📦', description: '', craftable: false, craft_output: 1, materials: [] }
+const EMPTY_FORM = { name: '', category_id: '', emoji: '📦', description: '', craftable: false, craft_output: 1, materials: [], location_id: '' }
 
 // 선택된 값은 label로 표시, 포커스 시 검색 모드로 전환
 function SearchSelect({ selectedLabel, onSelect, options, placeholder = '검색...', className = '' }) {
@@ -110,7 +110,7 @@ function NameAutocomplete({ value, onChange, onSelect, items, excludeId }) {
   )
 }
 
-function ItemModal({ item, categories, items, onClose, onSave }) {
+function ItemModal({ item, categories, items, locations, onClose, onSave }) {
   const [form, setForm] = useState(() => item ? {
     name: item.name,
     category_id: item.category_id ?? '',
@@ -119,6 +119,7 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
     craftable: !!item.craft_output,
     craft_output: item.craft_output ?? 1,
     materials: item.recipes ?? [],
+    location_id: item.location_id ?? '',
   } : EMPTY_FORM)
   const [error, setError] = useState(null)
   const [isPending, startTransition] = useTransition()
@@ -142,6 +143,7 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
       description: form.description,
       craft_output: form.craftable ? form.craft_output : null,
       materials: form.craftable ? form.materials.filter(m => m.material_id) : [],
+      location_id: form.location_id || null,
     }
     startTransition(async () => {
       const result = item ? await updateItem(item.id, data) : await addItem(data)
@@ -155,6 +157,11 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
     ...categories.map(c => ({ value: c.id, label: c.name })),
   ]
   const selectedCategory = categories.find(c => c.id === form.category_id)
+  const locationOptions = [
+    { value: '', label: '미지정' },
+    ...(locations ?? []).map(l => ({ value: l.id, label: l.name, emoji: l.emoji })),
+  ]
+  const selectedLocation = (locations ?? []).find(l => l.id === form.location_id)
 
   const materialOptions = items
     .filter(i => i.id !== item?.id)
@@ -205,6 +212,16 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
               onSelect={opt => set('category_id', opt.value)}
               options={categoryOptions}
               placeholder="카테고리 검색..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>획득 위치</label>
+            <SearchSelect
+              selectedLabel={selectedLocation ? `${selectedLocation.emoji} ${selectedLocation.name}` : '미지정'}
+              onSelect={opt => set('location_id', opt.value)}
+              options={locationOptions}
+              placeholder="위치 검색..."
             />
           </div>
 
@@ -275,7 +292,7 @@ function ItemModal({ item, categories, items, onClose, onSave }) {
   )
 }
 
-export default function ItemsTab({ categories, setCategories, items, setItems }) {
+export default function ItemsTab({ categories, setCategories, items, setItems, locations }) {
   const [filterCategoryId, setFilterCategoryId] = useState(null) // null=전체, 'uncategorized'=미분류, uuid=특정
   const [searchQuery, setSearchQuery] = useState('')
   const [modal, setModal] = useState(null)
@@ -474,6 +491,7 @@ export default function ItemsTab({ categories, setCategories, items, setItems })
           item={modal === 'add' ? null : modal}
           categories={categories}
           items={items}
+          locations={locations ?? []}
           onClose={() => setModal(null)}
           onSave={handleSaveItem}
         />
