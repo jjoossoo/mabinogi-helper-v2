@@ -107,6 +107,25 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
     setRoute(null)
   }, [selectedCharId])
 
+  // Import locations from material calculator (via sessionStorage)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('routePlannerLocations')
+      if (!raw) return
+      sessionStorage.removeItem('routePlannerLocations')
+      const ids = JSON.parse(raw)
+      if (Array.isArray(ids) && ids.length > 0) {
+        setManualLocationIds(prev => {
+          const next = [...prev]
+          for (const id of ids) {
+            if (!next.includes(id)) next.push(id)
+          }
+          return next
+        })
+      }
+    } catch {}
+  }, [])
+
   const destinationLocIds = useMemo(() => {
     const locs = new Set()
     for (const tid of checkedTradeIds) {

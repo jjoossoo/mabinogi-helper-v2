@@ -291,7 +291,11 @@ export default function LocationMapEditor({ initialLocations, initialConnections
 
     if (mode === 'move') {
       if (node) {
-        dragRef.current = { nodeId: node.id, startX: x, startY: y, origX: node.x, origY: node.y }
+        // If dragging a parent node, carry all its children along
+        const children = nodes
+          .filter(n => n.parent_id === node.id)
+          .map(n => ({ id: n.id, origX: n.x, origY: n.y }))
+        dragRef.current = { nodeId: node.id, startX: x, startY: y, origX: node.x, origY: node.y, children }
       }
     } else if (mode === 'connect') {
       if (!node) { setConnectFirstId(null); setPreviewLine(null); return }
@@ -336,10 +340,17 @@ export default function LocationMapEditor({ initialLocations, initialConnections
 
     // Drag
     if (dragRef.current && mode === 'move') {
-      const { nodeId, startX, startY, origX, origY } = dragRef.current
-      const nx = Math.max(NODE_R, Math.min(CANVAS_W - NODE_R, origX + x - startX))
-      const ny = Math.max(NODE_R, Math.min(CANVAS_H - NODE_R, origY + y - startY))
-      setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, x: nx, y: ny } : n))
+      const { nodeId, startX, startY, origX, origY, children } = dragRef.current
+      const dx = x - startX
+      const dy = y - startY
+      const nx = Math.max(NODE_R, Math.min(CANVAS_W - NODE_R, origX + dx))
+      const ny = Math.max(NODE_R, Math.min(CANVAS_H - NODE_R, origY + dy))
+      setNodes(prev => prev.map(n => {
+        if (n.id === nodeId) return { ...n, x: nx, y: ny }
+        const child = children?.find(c => c.id === n.id)
+        if (child) return { ...n, x: child.origX + dx, y: child.origY + dy }
+        return n
+      }))
       return
     }
 

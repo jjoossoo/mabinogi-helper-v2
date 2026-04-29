@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 function calcMaterials(itemId, amount, itemsMap, recipesMap, craftOwned, craftPlan, baseMaterials, parentId) {
@@ -30,6 +31,7 @@ function calcMaterials(itemId, amount, itemsMap, recipesMap, craftOwned, craftPl
 }
 
 export default function MaterialsPanel({ targets, setTargets, craftOwned, setCraftOwned, baseOwned, setBaseOwned }) {
+  const router = useRouter()
   const [items, setItems] = useState([])
   const [recipesMap, setRecipesMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -41,7 +43,7 @@ export default function MaterialsPanel({ targets, setTargets, craftOwned, setCra
     async function fetchData() {
       const supabase = createClient()
       const [{ data: itemData }, { data: recipeData }] = await Promise.all([
-        supabase.from('items').select('id, name, emoji, craft_output').order('name'),
+        supabase.from('items').select('id, name, emoji, craft_output, location_id').order('name'),
         supabase.from('recipes').select('item_id, material_id, amount'),
       ])
       setItems(itemData ?? [])
@@ -94,6 +96,23 @@ export default function MaterialsPanel({ targets, setTargets, craftOwned, setCra
 
   const baseMaterialEntries = Object.entries(result.baseMaterials)
   const craftPlanEntries = Object.entries(result.craftPlan)
+
+  // Location IDs from base materials that still need to be obtained and have a location
+  const locationIdsToSend = useMemo(() => {
+    const ids = new Set()
+    for (const [id, info] of baseMaterialEntries) {
+      const owned = baseOwned[id] ?? 0
+      if (owned >= info.amount) continue
+      const item = itemsMap[id]
+      if (item?.location_id) ids.add(item.location_id)
+    }
+    return [...ids]
+  }, [baseMaterialEntries, baseOwned, itemsMap])
+
+  function sendToRoutePlanner() {
+    sessionStorage.setItem('routePlannerLocations', JSON.stringify(locationIdsToSend))
+    router.push('/route-planner')
+  }
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -169,12 +188,25 @@ export default function MaterialsPanel({ targets, setTargets, craftOwned, setCra
           {/* 필요 재료 */}
           {baseMaterialEntries.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold font-serif mb-2 flex items-center gap-2"
-                style={{ color: 'var(--gold)' }}>
+              <div className="flex items-center gap-2 mb-2">
                 <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
-                ✦ 필요 재료
+                <h3 className="text-xs font-semibold font-serif"
+                  style={{ color: 'var(--gold)' }}>✦ 필요 재료</h3>
                 <div className="h-px flex-1" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              </h3>
+                {locationIdsToSend.length > 0 && (
+                  <button
+                    onClick={sendToRoutePlanner}
+                    className="flex-shrink-0 text-xs px-2.5 py-1 rounded transition-colors"
+                    style={{
+                      backgroundColor: 'rgba(201,168,76,0.1)',
+                      border: '1px solid rgba(201,168,76,0.4)',
+                      color: 'var(--gold-dark)',
+                    }}
+                  >
+                    🗺 경로 계산 ({locationIdsToSend.length}곳)
+                  </button>
+                )}
+              </div>
               <div className="space-y-1.5">
                 {baseMaterialEntries.map(([id, info]) => {
                   const item = itemsMap[id]

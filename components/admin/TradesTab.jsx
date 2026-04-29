@@ -137,9 +137,15 @@ function TradeModal({ trade, items, trades, locations, onSave, onClose }) {
     value: loc, label: loc,
   }))
 
+  const locById = Object.fromEntries((locations ?? []).map(l => [l.id, l]))
+  function locLabel(l) {
+    if (!l) return '미지정'
+    const parent = l.parent_id ? locById[l.parent_id] : null
+    return parent ? `${parent.emoji} ${parent.name} · ${l.emoji} ${l.name}` : `${l.emoji} ${l.name}`
+  }
   const locationOptions = [
     { value: '', label: '미지정' },
-    ...(locations ?? []).map(l => ({ value: l.id, label: l.name, emoji: l.emoji })),
+    ...(locations ?? []).map(l => ({ value: l.id, label: locLabel(l) })),
   ]
   const selectedLocationInfo = (locations ?? []).find(l => l.id === form.location_id)
 
@@ -212,7 +218,7 @@ function TradeModal({ trade, items, trades, locations, onSave, onClose }) {
           <div>
             <label className="block text-sm mb-1.5 font-medium" style={{ color: 'var(--ink)' }}>경로 계산 위치</label>
             <SearchSelect
-              selectedLabel={selectedLocationInfo ? `${selectedLocationInfo.emoji} ${selectedLocationInfo.name}` : '미지정'}
+              selectedLabel={locLabel(selectedLocationInfo)}
               onSelect={opt => set('location_id', opt.value)}
               options={locationOptions}
               placeholder="위치 검색..."

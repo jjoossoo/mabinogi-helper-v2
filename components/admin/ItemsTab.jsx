@@ -242,9 +242,15 @@ function ItemModal({ item, categories, items, locations, onClose, onSave, onAddI
     ...categories.map(c => ({ value: c.id, label: c.name })),
   ]
   const selectedCategory = categories.find(c => c.id === form.category_id)
+  const locById = Object.fromEntries((locations ?? []).map(l => [l.id, l]))
+  function locLabel(l) {
+    if (!l) return '미지정'
+    const parent = l.parent_id ? locById[l.parent_id] : null
+    return parent ? `${parent.emoji} ${parent.name} · ${l.emoji} ${l.name}` : `${l.emoji} ${l.name}`
+  }
   const locationOptions = [
     { value: '', label: '미지정' },
-    ...(locations ?? []).map(l => ({ value: l.id, label: l.name, emoji: l.emoji })),
+    ...(locations ?? []).map(l => ({ value: l.id, label: locLabel(l) })),
   ]
   const selectedLocation = (locations ?? []).find(l => l.id === form.location_id)
 
@@ -303,7 +309,7 @@ function ItemModal({ item, categories, items, locations, onClose, onSave, onAddI
           <div>
             <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--ink)' }}>획득 위치</label>
             <SearchSelect
-              selectedLabel={selectedLocation ? `${selectedLocation.emoji} ${selectedLocation.name}` : '미지정'}
+              selectedLabel={locLabel(selectedLocation)}
               onSelect={opt => set('location_id', opt.value)}
               options={locationOptions}
               placeholder="위치 검색..."
