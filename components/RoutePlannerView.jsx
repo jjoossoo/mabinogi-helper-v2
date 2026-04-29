@@ -169,6 +169,8 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
     return tasks
   }
 
+  const [summaryCollapsed, setSummaryCollapsed] = useState(false)
+
   const locationOptions = locations.map(l => ({ value: l.id, label: l.name, emoji: l.emoji }))
   const startLocation = locationMap[startLocationId]
   const canCalculate = !!startLocationId && destinationLocIds.length > 0
@@ -340,8 +342,26 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
 
         {/* Route summary */}
         <div
+          className="flex-shrink-0"
+          style={{ borderTop: '1.5px solid rgba(201,168,76,0.25)', backgroundColor: '#110c04' }}
+        >
+          {/* Summary toggle bar */}
+          <button
+            onClick={() => setSummaryCollapsed(p => !p)}
+            className="w-full flex items-center justify-between px-3 py-1.5 transition-colors hover:bg-[rgba(201,168,76,0.05)]"
+            style={{ borderBottom: summaryCollapsed ? 'none' : '1px solid rgba(201,168,76,0.1)' }}
+          >
+            <span className="text-xs font-serif font-semibold" style={{ color: 'var(--gold-dark)' }}>
+              {route ? `경로 요약 · 총 ${route.totalTime}분` : '경로 요약'}
+            </span>
+            <span className="text-xs" style={{ color: 'var(--gold)', opacity: 0.6 }}>
+              {summaryCollapsed ? '▲ 펼치기' : '▼ 접기'}
+            </span>
+          </button>
+        </div>
+        <div
           className="flex-shrink-0 overflow-y-auto"
-          style={{ maxHeight: '220px', borderTop: '1.5px solid rgba(201,168,76,0.25)', backgroundColor: '#110c04' }}
+          style={{ maxHeight: summaryCollapsed ? 0 : '220px', overflow: summaryCollapsed ? 'hidden' : 'auto', backgroundColor: '#110c04', transition: 'max-height 0.2s ease' }}
         >
           {!route ? (
             <div className="flex items-center justify-center py-6"
@@ -357,9 +377,6 @@ export default function RoutePlannerView({ initialCharacters, locations, connect
             <div className="p-3">
               {/* Summary bar */}
               <div className="flex items-center gap-3 mb-2 px-1">
-                <span className="font-serif font-semibold text-xs" style={{ color: 'var(--gold-dark)' }}>
-                  총 {route.totalTime}분
-                </span>
                 <span className="text-xs" style={{ color: 'var(--parchment)', opacity: 0.45 }}>
                   {route.segments.length}개 구간 · {destinationLocIds.length}개 목적지
                 </span>
