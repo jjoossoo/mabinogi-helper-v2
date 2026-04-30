@@ -19,6 +19,7 @@ export default async function AdminPage() {
     { data: quests },
     { data: profiles },
     { data: trades },
+    { data: npcs },
     { data: contentsData },
     { data: locations },
     { data: connections },
@@ -33,8 +34,11 @@ export default async function AdminPage() {
       .order('name'),
     admin.from('profiles').select('user_id, role, created_at'),
     admin.from('trades')
-      .select('*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji), location_info:location_id(id, name, emoji)')
+      .select('*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji), location_info:location_id(id, name, emoji), npc:npc_id(id, name, emoji)')
       .order('npc_name'),
+    admin.from('npcs')
+      .select('*, location:location_id(id, name, emoji, parent_id), npc_sale_items(id, item_id, sort_order, item:item_id(id, name, emoji)), trades(id, give_item:give_item_id(id, name, emoji), give_amount, receive_item:receive_item_id(id, name, emoji), receive_amount, scope, reset_type, reset_day, reset_hour)')
+      .order('name'),
     admin.from('contents')
       .select('*, content_conditions(id, name, type, max_value, sort_order), content_rewards(id, item_id, amount, items(name, emoji))')
       .order('sort_order').order('name'),
@@ -58,6 +62,7 @@ export default async function AdminPage() {
       initialQuests={quests ?? []}
       initialMembers={members}
       initialTrades={trades ?? []}
+      initialNpcs={npcs ?? []}
       initialContents={contentsData ?? []}
       initialLocations={locations ?? []}
       initialConnections={connections ?? []}

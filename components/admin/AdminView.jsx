@@ -5,11 +5,13 @@ import ItemsTab from './ItemsTab'
 import QuestsTab from './QuestsTab'
 import MembersTab from './MembersTab'
 import TradesTab from './TradesTab'
+import NpcsTab from './NpcsTab'
 import ContentsTab from './ContentsTab'
 import LocationsTab from './LocationsTab'
 
 const TABS = [
   { id: 'items', label: '아이템 관리' },
+  { id: 'npcs', label: 'NPC 관리' },
   { id: 'quests', label: '퀘스트/미션 관리' },
   { id: 'trades', label: '물물교환 관리' },
   { id: 'contents', label: '콘텐츠 관리' },
@@ -17,13 +19,14 @@ const TABS = [
   { id: 'members', label: '회원 관리' },
 ]
 
-export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades, initialContents, initialLocations, initialConnections, initialDungeons }) {
+export default function AdminView({ initialCategories, initialItems, initialQuests, initialMembers, initialTrades, initialNpcs, initialContents, initialLocations, initialConnections, initialDungeons }) {
   const [activeTab, setActiveTab] = useState('items')
   const [categories, setCategories] = useState(initialCategories)
   const [items, setItems] = useState(initialItems)
   const [quests, setQuests] = useState(initialQuests)
   const [members, setMembers] = useState(initialMembers)
   const [trades, setTrades] = useState(initialTrades)
+  const [npcs, setNpcs] = useState(initialNpcs ?? [])
   const [contents, setContents] = useState(initialContents)
   const [locations, setLocations] = useState(initialLocations)
   const [connections, setConnections] = useState(initialConnections)
@@ -77,6 +80,9 @@ export default function AdminView({ initialCategories, initialItems, initialQues
             quests={quests} setQuests={setQuests}
             items={items}
           />
+        )}
+        {activeTab === 'npcs' && (
+          <NpcsTab npcs={npcs} setNpcs={setNpcs} items={items} locations={locations} />
         )}
         {activeTab === 'trades' && (
           <TradesTab trades={trades} setTrades={setTrades} items={items} locations={locations} />

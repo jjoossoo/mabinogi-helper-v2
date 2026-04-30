@@ -11,15 +11,15 @@ async function requireAdmin() {
   return profile?.role === 'admin' ? user : null
 }
 
-const TRADE_SELECT = '*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji), location_info:location_id(id, name, emoji)'
+const TRADE_SELECT = '*, give_item:give_item_id(id, name, emoji), receive_item:receive_item_id(id, name, emoji), location_info:location_id(id, name, emoji), npc:npc_id(id, name, emoji)'
 
 export async function addTrade(data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { npc_name, location, location_id, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type, reset_day, reset_hour } = data
+  const { npc_id, npc_name, location, location_id, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type, reset_day, reset_hour } = data
   const { data: trade, error } = await db
     .from('trades')
-    .insert({ npc_name, location: location ?? '', location_id: location_id || null, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6 })
+    .insert({ npc_id: npc_id || null, npc_name: npc_name ?? '', location: location ?? '', location_id: location_id || null, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6 })
     .select(TRADE_SELECT)
     .single()
   if (error) return { error: error.message }
@@ -29,10 +29,10 @@ export async function addTrade(data) {
 export async function updateTrade(id, data) {
   if (!await requireAdmin()) return { error: '권한 없음' }
   const db = createAdminClient()
-  const { npc_name, location, location_id, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type, reset_day, reset_hour } = data
+  const { npc_id, npc_name, location, location_id, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type, reset_day, reset_hour } = data
   const { data: trade, error } = await db
     .from('trades')
-    .update({ npc_name, location: location ?? '', location_id: location_id || null, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6 })
+    .update({ npc_id: npc_id || null, npc_name: npc_name ?? '', location: location ?? '', location_id: location_id || null, give_item_id, give_amount, receive_item_id, receive_amount, scope, reset_type: reset_type ?? 'none', reset_day: reset_day ?? null, reset_hour: reset_hour ?? 6 })
     .eq('id', id)
     .select(TRADE_SELECT)
     .single()
